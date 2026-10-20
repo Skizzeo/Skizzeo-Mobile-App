@@ -2,7 +2,7 @@ name: Web-Version veröffentlichen
 
 on:
   push:
-    branches: [main, "claude/**"]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
