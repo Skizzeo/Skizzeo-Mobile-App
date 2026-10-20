@@ -331,9 +331,10 @@ impl Geometry {
             return Some([last[0] + 1.0, last[1], 0.0]);
         }
         let previous = path[path.len() - 2];
+        // Eingabe im Uhrzeigersinn: Vorschlag biegt nach rechts ab.
         Some([
-            last[0] - js_sign(last[1] - previous[1]),
-            last[1] + js_sign(last[0] - previous[0]),
+            last[0] + js_sign(last[1] - previous[1]),
+            last[1] - js_sign(last[0] - previous[0]),
             0.0,
         ])
     }
@@ -500,7 +501,7 @@ mod tests {
         assert_eq!(g.next_draft(&[[0.0; 3]]), Some([1.0, 0.0, 0.0]));
         assert_eq!(
             g.next_draft(&[[0.0; 3], [2.0, 0.0, 0.0]]),
-            Some([2.0, 1.0, 0.0])
+            Some([2.0, -1.0, 0.0])
         );
         let d = g.orthogonal_draft(&[[0.0; 3]], &[3.0, 1.0, 0.0], None, 1.4);
         assert_eq!(d.point, Some([3.0, 0.0, 0.0]));

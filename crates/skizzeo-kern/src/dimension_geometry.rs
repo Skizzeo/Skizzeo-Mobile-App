@@ -64,21 +64,85 @@ pub fn place_measurement(path: &[Point3], record: &ChainRecord, style: &Dimensio
     }
 }
 
-pub fn segment_dimension(path: &[Point3], index: usize, axis: usize, style: &DimensionStyle) -> DimensionLine {
+/// Maßlinie eines Einzelsegments, immer auf der Außenseite.
+///
+/// `clockwise`: Der Pfad läuft im Uhrzeigersinn (Draufsicht), außen liegt dann links
+/// der Laufrichtung, sonst rechts.
+pub fn segment_dimension(
+    path: &[Point3],
+    index: usize,
+    axis: usize,
+    style: &DimensionStyle,
+    clockwise: bool,
+) -> DimensionLine {
     let origin_start = path[index];
     let origin_end = path[(index + 1) % path.len()];
     let fixed = 1 - axis;
+    let direction = js_sign(origin_end[axis] - origin_start[axis]);
+    let left = if axis == 0 { direction } else { -direction };
+    let mut sign = if clockwise { left } else { -left };
+    if sign == 0.0 {
+        sign = -1.0;
+    }
     let mut line_start = origin_start;
     let mut line_end = origin_end;
-    line_start[fixed] -= style.dimension_offset;
-    line_end[fixed] -= style.dimension_offset;
+    line_start[fixed] += sign * style.dimension_offset;
+    line_end[fixed] += sign * style.dimension_offset;
     DimensionLine {
         axis,
-        sign: -1.0,
+        sign,
         line_start,
         line_end,
         origin_start,
         origin_end,
+    }
+}
+
+/// Umlaufsinn eines geschlossenen Pfades in der Draufsicht (Fläche ≤ 0 = Uhrzeigersinn).
+pub fn is_clockwise(path: &[Point3]) -> bool {
+    let area: f64 = (0..path.len())
+        .map(|i| {
+            let a = path[i];
+            let b = path[(i + 1) % path.len()];
+            a[0] * b[1] - b[0] * a[1]
+        })
+        .sum();
+    area <= 0.0
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn style() -> DimensionStyle {
+        DimensionStyle {
+            dimension_offset: 1.5,
+            dimension_spacing: 1.0,
+            extension_gap: 0.2,
+            extension_overhang: 0.2,
+            dimension_overhang: 0.2,
+            symbol: DimensionSymbol::Slash,
+            tick_length: 0.4,
+        }
+    }
+
+    #[test]
+    fn segment_dimensions_lie_outside() {
+        // Rechteck im Uhrzeigersinn: oben nach rechts, rechts nach unten, ...
+        let path = [[0.0, 0.0, 0.0], [10.0, 0.0, 0.0], [10.0, -4.0, 0.0], [0.0, -4.0, 0.0]];
+        assert!(is_clockwise(&path));
+        let top = segment_dimension(&path, 0, 0, &style(), true);
+        assert_eq!(top.line_start[1], 1.5);
+        let right = segment_dimension(&path, 1, 1, &style(), true);
+        assert_eq!(right.line_start[0], 11.5);
+        let bottom = segment_dimension(&path, 2, 0, &style(), true);
+        assert_eq!(bottom.line_start[1], -5.5);
+        let left = segment_dimension(&path, 3, 1, &style(), true);
+        assert_eq!(left.line_start[0], -1.5);
+        let reversed: Vec<Point3> = path.iter().rev().copied().collect();
+        assert!(!is_clockwise(&reversed));
+        let top = segment_dimension(&reversed, 2, 0, &style(), false);
+        assert_eq!(top.line_start[1], 1.5);
     }
 }
 

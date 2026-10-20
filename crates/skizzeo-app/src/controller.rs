@@ -18,6 +18,9 @@ use crate::model::*;
 use crate::render::{self, FrameDimension, FrameSelected, RenderFrame, RenderOutput};
 use crate::style::Appearance;
 
+/// Länge des vorgegebenen ersten Segments in Metern.
+pub const START_SEGMENT: f64 = 10.0;
+
 /// Normalisierte Zeigerereignisse der Zeichenfläche.
 #[derive(Clone, Copy, Debug)]
 pub struct PointerEvent {
@@ -195,12 +198,14 @@ impl Viewport {
             .collect()
     }
 
-    pub fn segment_dimension_line(&self, path: &[Point3], index: usize) -> DimensionLine {
+    /// Maßlinie eines Segments außen; offene Züge werden im Uhrzeigersinn eingegeben.
+    pub fn segment_dimension_line(&self, path: &[Point3], index: usize, closed: bool) -> DimensionLine {
         dimgeo::segment_dimension(
             path,
             index,
             self.geometry.segment_axis(path, index),
             &self.dimension_style(),
+            !closed || dimgeo::is_clockwise(path),
         )
     }
 
@@ -216,7 +221,7 @@ impl Viewport {
                 .collect()
         } else {
             (0..path.len().saturating_sub(1))
-                .map(|index| self.segment_dimension_line(path, index))
+                .map(|index| self.segment_dimension_line(path, index, false))
                 .collect()
         };
         lines
@@ -620,8 +625,12 @@ impl Viewport {
             self.camera.elevation = self.camera.elevation.max(std::f64::consts::PI / 5.0);
         }
         self.interaction.hover_edge = None;
-        self.model
-            .replace_active(if enabled { vec![[0.0, 0.0, 0.0]] } else { Vec::new() });
+        // Erstes Segment im Uhrzeigersinn mit 10 m vorgegeben (per Maß änderbar).
+        self.model.replace_active(if enabled {
+            vec![[0.0, 0.0, 0.0], [START_SEGMENT, 0.0, 0.0]]
+        } else {
+            Vec::new()
+        });
         self.interaction.pointer = None;
         self.interaction.start_armed = false;
         self.interaction.preview_bounds = None;
@@ -759,7 +768,7 @@ impl Viewport {
             return;
         }
         let path = vec![last, next];
-        let line = self.segment_dimension_line(&path, 0);
+        let line = self.segment_dimension_line(&path, 0, false);
         let record = Record {
             key: PathKey::Temp,
             temp: Some(path),
@@ -1166,7 +1175,7 @@ impl Viewport {
                     closed: false,
                     preview: false,
                 },
-                line: self.segment_dimension_line(active, index),
+                line: self.segment_dimension_line(active, index, false),
                 name: format!("Aktueller Zug, Segment {}", index + 1),
                 source: None,
                 follow_measure: false,
@@ -1177,7 +1186,7 @@ impl Viewport {
                 let path = vec![last, live];
                 records.push(Record {
                     key: PathKey::Temp,
-                    line: self.segment_dimension_line(&path, 0),
+                    line: self.segment_dimension_line(&path, 0, false),
                     temp: Some(path),
                     kind: MeasureKind::Segment {
                         index: 0,
@@ -1483,6 +1492,14 @@ impl Viewport {
                 .dimension_edit
                 .as_ref()
                 .is_some_and(|e| e.record.is_preview())
+    }
+
+    /// Hinweis zum Uhrzeigersinn zu Beginn der Polygoneingabe.
+    pub fn direction_hint_visible(&self) -> bool {
+        self.is_drawing()
+            && !self.is_closing()
+            && !self.interaction.draft_blocked
+            && self.model.active.len() <= 2
     }
 
     pub fn hint_visible(&self) -> bool {
@@ -1861,7 +1878,7 @@ impl Viewport {
                     closed: true,
                     preview: false,
                 },
-                line: self.segment_dimension_line(&path, index),
+                line: self.segment_dimension_line(&path, index, true),
                 name: String::new(),
                 source: None,
                 follow_measure: false,

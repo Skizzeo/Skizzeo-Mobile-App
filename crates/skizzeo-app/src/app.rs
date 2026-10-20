@@ -23,6 +23,7 @@ use crate::style::{
 
 const VERSION: &str = "V039";
 const DRAWING_HINT: &str = "Zurückfahren gesperrt. Richtung wechseln oder „Schritt zurück“ wählen.";
+const DIRECTION_HINT: &str = "Polygon im Uhrzeigersinn eingeben. Das erste Segment ist mit 10 m vorgegeben; seine Länge änderst du durch Antippen des Maßes.";
 const TABS: [(Tab, &str); 4] = [
     (Tab::Dimensions, "Bemaßung"),
     (Tab::View, "Ansicht"),
@@ -690,15 +691,17 @@ impl App {
         };
         let a = self.vp.appearance.clone();
         let center = Pos2::new(x as f32, y as f32);
-        let rect = Rect::from_center_size(center, Vec2::splat(56.0));
+        let s_rect = (28.0 * (self.vp.appearance.num("startTargetScale") as f32)).max(22.0);
+        let rect = Rect::from_center_size(center, Vec2::splat(2.0 * s_rect));
         let near = self.vp.interaction.start_near || self.vp.is_closing();
-        // Auf Touch-Geräten kleiner dargestellt (Wunsch Jörn), Trefferfläche bleibt 56 px.
-        let s = if self.vp.coarse_touch_device { 0.65 } else { 1.0 };
+        // Größe einstellbar; Trefferfläche mindestens 44 px.
+        let s = self.vp.appearance.num("startTargetScale") as f32;
+        let hit = (28.0 * s).max(22.0);
         let (clicked, hovered) = layer(ui, &self.hits, rect, true, |ui| {
             let response = ui.interact(rect, Id::unique("start-target-button"), Sense::click());
             let inside = response
                 .hover_pos()
-                .is_some_and(|p| p.distance(center) <= 28.0);
+                .is_some_and(|p| p.distance(center) <= hit);
             let painter = ui.painter();
             let (fill, border, text, ring, ring_width) = if near {
                 (
@@ -842,14 +845,19 @@ impl App {
     fn draw_hint(&self, ui: &mut egui::Ui, safe: Insets, width: f32) {
         let ctx = &ui.ctx().clone();
         let _ = ctx;
-        if !self.vp.hint_visible() {
+        let text = if self.vp.hint_visible() {
+            DRAWING_HINT
+        } else if self.vp.direction_hint_visible() {
+            DIRECTION_HINT
+        } else {
             return;
-        }
+        };
         let a = &self.vp.appearance;
         let painter = ctx.layer_painter(LayerId::background());
         let inner = width - 32.0 - 24.0;
-        let g = galley(&painter, DRAWING_HINT, font(a.text("uiFont"), 400, 14.0), hex_color("#ffe5ad"), Some(inner), Some(14.0 * 1.4));
-        let top = (safe.top as f32).max(16.0);
+        let g = galley(&painter, text, font(a.text("uiFont"), 400, 14.0), hex_color("#ffe5ad"), Some(inner), Some(14.0 * 1.4));
+        // Unter der Schaltfläche „Einstellungen“, damit der Hinweis sie nicht verdeckt.
+        let top = (safe.top as f32).max(12.0 + 48.0 + 8.0);
         let rect = Rect::from_min_size(Pos2::new(16.0, top), Vec2::new(width - 32.0, g.size().y + 20.0));
         layer(ui, &self.hits, rect, false, |ui| {
             let painter = ui.painter();

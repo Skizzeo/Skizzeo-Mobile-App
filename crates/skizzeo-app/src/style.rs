@@ -106,6 +106,7 @@ pub static FIELDS: &[Field] = &[
     Field { key: "dashLength", label: "Vorschau: Strichlänge (px)", tab: Tab::Input, kind: Kind::Number { value: 8.0, min: 1.0, max: 40.0, step: 1.0, factor: 1.0 } },
     Field { key: "dashGap", label: "Vorschau: Strichabstand (px)", tab: Tab::Input, kind: Kind::Number { value: 6.0, min: 0.0, max: 40.0, step: 1.0, factor: 1.0 } },
     Field { key: "startColor", label: "Startpunkt: Farbe", tab: Tab::Input, kind: Kind::Color("#f5b638") },
+    Field { key: "startTargetScale", label: "Start-Schaltfläche: Größe (%)", tab: Tab::Input, kind: Kind::Number { value: 0.6, min: 0.3, max: 1.5, step: 5.0, factor: 100.0 } },
     Field { key: "startRadius", label: "Startpunkt: Radius (px)", tab: Tab::Input, kind: Kind::Number { value: 6.0, min: 2.0, max: 20.0, step: 0.5, factor: 1.0 } },
     Field { key: "editFill", label: "Bearbeitung: Feldhintergrund", tab: Tab::Input, kind: Kind::Color("#8052bb") },
     Field { key: "editHover", label: "Bearbeitung: Feld-Hover", tab: Tab::Input, kind: Kind::Color("#9563da") },
@@ -329,8 +330,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn schema_has_65_fields() {
-        assert_eq!(FIELDS.len(), 65);
+    fn schema_has_66_fields() {
+        assert_eq!(FIELDS.len(), 66);
         assert!(validated(&defaults_json()).is_ok());
     }
 
