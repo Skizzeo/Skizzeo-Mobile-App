@@ -692,6 +692,8 @@ impl App {
         let center = Pos2::new(x as f32, y as f32);
         let rect = Rect::from_center_size(center, Vec2::splat(56.0));
         let near = self.vp.interaction.start_near || self.vp.is_closing();
+        // Auf Touch-Geräten kleiner dargestellt (Wunsch Jörn), Trefferfläche bleibt 56 px.
+        let s = if self.vp.coarse_touch_device { 0.65 } else { 1.0 };
         let (clicked, hovered) = layer(ui, &self.hits, rect, true, |ui| {
             let response = ui.interact(rect, Id::unique("start-target-button"), Sense::click());
             let inside = response
@@ -715,9 +717,10 @@ impl App {
                     7.0,
                 )
             };
-            annulus(painter, center, 28.0, 28.0 + ring_width, ring);
-            painter.circle(center, 27.0, fill, Stroke::new(2.0, border));
-            let g = galley(painter, "Start", font(a.text("uiFont"), 600, 13.0), text, None, Some(13.0));
+            annulus(painter, center, 28.0 * s, (28.0 + ring_width) * s, ring);
+            painter.circle(center, 28.0 * s - 1.0, fill, Stroke::new(2.0, border));
+            let size = (13.0 * s).max(10.0);
+            let g = galley(painter, "Start", font(a.text("uiFont"), 600, size), text, None, Some(size));
             painter.galley(center - g.size() / 2.0, g, text);
             (response.clicked() && inside, inside)
         });
