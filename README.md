@@ -10,3 +10,9 @@ Jeder Push baut die Web-Version (WebAssembly) und veröffentlicht sie über GitH
 (`.github/workflows/pages.yml`). Geöffnete Seiten laden eine neue Version selbst nach.
 
 Lokal: `cargo run -p skizzeo-app` (Desktop-Fenster) oder `./scripts/build-web.sh` (nach `dist/`).
+
+Lokale Entwicklung mit Sofort-Vorschau: `Skizzeo-Dev-Start.cmd` doppelklicken oder
+`python scripts/dev.py` starten und http://localhost:8080 öffnen. Jede gespeicherte Änderung
+wird in wenigen Sekunden neu gebaut, die offene Seite lädt sich selbst nach.
+Einmalig nötig: `rustup target add wasm32-unknown-unknown` und
+`cargo install wasm-bindgen-cli --version 0.2.129 --locked`.
