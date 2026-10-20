@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#20262d" />
+    <meta name="version" content="V039" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Skizzeo" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="icon-180.png" />
+    <link rel="icon" href="icon-192.png" />
+    <title>3D-Kern · Viewport · V039</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        overscroll-behavior: none;
+        background: #393f33;
+        color-scheme: dark;
+        font-family: Inter, 'Segoe UI', sans-serif;
+      }
+      #viewport {
+        position: fixed;
+        left: 0;
+        top: 0;
+        display: block;
+        width: 100%;
+        height: 100vh;
+        height: 100svh;
+        height: 100dvh;
+        outline: none;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      #safe-area-probe {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 0;
+        height: 0;
+        visibility: hidden;
+        pointer-events: none;
+        padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+          env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+      }
+      #error {
+        position: absolute;
+        left: 16px;
+        right: 16px;
+        top: 16px;
+        z-index: 6;
+        margin: 0;
+        padding: 16px;
+        border-radius: 8px;
+        background: #20262d;
+        color: #e6e5e0;
+        text-align: center;
+        font-size: 14px;
+        line-height: 1.5;
+        pointer-events: none;
+      }
+      [hidden] {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="viewport" aria-label="3D-Viewport"></canvas>
+    <div id="safe-area-probe" aria-hidden="true"></div>
+    <div id="error" role="status">
+      V039 · Die interaktive 3D-Ansicht startet. Bleibt dieser Hinweis sichtbar, führt diese
+      Ansicht die Anwendung nicht vollständig aus. Öffne die Seite in einem aktuellen Browser.
+    </div>
+    <script type="module">
+      import init from './skizzeo-app.js?v=__BUILD__';
+      init({ module_or_path: './skizzeo-app_bg.wasm?v=__BUILD__' }).catch((failure) => {
+        const status = document.getElementById('error');
+        status.textContent =
+          'V039 · Start der 3D-Ansicht fehlgeschlagen: ' + (failure?.message || String(failure));
+        status.hidden = false;
+      });
+    </script>
+    <script>
+      // Ersatz für Kapitel 14: neue Version automatisch laden (GitHub Pages).
+      (() => {
+        const current = '__BUILD__';
+        if (current.startsWith('__')) return;
+        let checking = false;
+        async function check() {
+          if (checking) return;
+          checking = true;
+          try {
+            const response = await fetch('version.txt?t=' + Date.now(), { cache: 'no-store' });
+            if (!response.ok) return;
+            const latest = (await response.text()).trim();
+            if (latest && latest !== current)
+              location.replace(location.pathname + '?v=' + encodeURIComponent(latest));
+          } catch {
+          } finally {
+            checking = false;
+          }
+        }
+        setInterval(check, 60000);
+        document.addEventListener('visibilitychange', () => {
+          if (!document.hidden) check();
+        });
+        window.addEventListener('pageshow', check);
+      })();
+    </script>
+  </body>
+</html>
