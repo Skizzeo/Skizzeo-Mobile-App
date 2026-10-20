@@ -4,7 +4,8 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-skizzeo-kern = { path = "../skizzeo-kern" }
+skizzeo-darstellung = { path = "../skizzeo-darstellung" }
+skizzeo-editor = { path = "../skizzeo-editor" }
 eframe = { version = "0.37", default-features = false, features = ["glow", "default_fonts", "x11"] }
 egui = "0.37"
 serde = { version = "1", features = ["derive"] }

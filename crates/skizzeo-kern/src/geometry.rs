@@ -2,7 +2,7 @@
 
 use std::collections::BTreeSet;
 
-use crate::{js_sign, Point3, Settings};
+use crate::{js_sign, KernError, Point3, Settings};
 
 /// Unveränderliche Grenzwerte des Kerns.
 #[derive(Clone, Copy, Debug)]
@@ -38,11 +38,6 @@ pub struct Draft {
     pub point: Option<Point3>,
     pub blocked: bool,
 }
-
-pub const MSG_POSITIVE: &str = "Bitte eine positive Länge eingeben.";
-pub const MSG_REVERSE_SEGMENT: &str = "Diese Länge würde ein Anschlusssegment umkehren oder aufheben.";
-pub const MSG_NOT_AFFECTED: &str = "Dieses Maß ist von der gewählten Kante nicht betroffen.";
-pub const MSG_NUMBER: &str = "Bitte eine Zahl eingeben, zum Beispiel 2,50.";
 
 impl Geometry {
     pub fn new(config: &Settings) -> Self {
@@ -246,9 +241,9 @@ impl Geometry {
         }
     }
 
-    pub fn positive_length(&self, length: f64) -> Result<f64, String> {
+    pub fn positive_length(&self, length: f64) -> Result<f64, KernError> {
         if !length.is_finite() || length < self.minimum_length {
-            return Err(MSG_POSITIVE.to_string());
+            return Err(KernError::NonPositiveLength);
         }
         Ok(length)
     }
@@ -262,9 +257,9 @@ impl Geometry {
         path: Vec<Point3>,
         index: usize,
         length: f64,
-    ) -> Result<Vec<Point3>, String> {
+    ) -> Result<Vec<Point3>, KernError> {
         if !self.matches_length(&path, index, length) {
-            return Err(MSG_REVERSE_SEGMENT.to_string());
+            return Err(KernError::ReversesSegment);
         }
         Ok(path)
     }
@@ -276,11 +271,11 @@ impl Geometry {
         selection: &EdgeSelection,
         index: usize,
         length: f64,
-    ) -> Result<Vec<Point3>, String> {
+    ) -> Result<Vec<Point3>, KernError> {
         self.positive_length(length)?;
         let rate = selection
             .rate(index)
-            .ok_or_else(|| MSG_NOT_AFFECTED.to_string())?;
+            .ok_or(KernError::NotAffectedByEdge)?;
         let delta = (length - self.segment_length(path, index)) / rate;
         let updated = self.shifted_segment(path, selection.index, delta, true);
         self.checked_length(updated, index, length)
@@ -292,7 +287,7 @@ impl Geometry {
         index: usize,
         length: f64,
         closed: bool,
-    ) -> Result<Vec<Point3>, String> {
+    ) -> Result<Vec<Point3>, KernError> {
         self.positive_length(length)?;
         let next = (index + 1) % path.len();
         let a = path[index];
@@ -305,24 +300,6 @@ impl Geometry {
             updated = self.translated_vertices(path, &[index], axis, -delta, closed);
         }
         self.checked_length(updated, index, length)
-    }
-
-    pub fn parse_length(&self, text: &str) -> Result<f64, String> {
-        let cleaned = js_trim(text);
-        if !is_length_syntax(cleaned) {
-            return Err(MSG_NUMBER.to_string());
-        }
-        let normalized = cleaned.replacen(',', ".", 1);
-        let normalized = normalized.strip_prefix('+').unwrap_or(&normalized);
-        let normalized = if normalized.ends_with('.') {
-            format!("{normalized}0")
-        } else if normalized.starts_with('.') {
-            format!("0{normalized}")
-        } else {
-            normalized.to_string()
-        };
-        let value = normalized.parse::<f64>().unwrap_or(f64::NAN);
-        self.positive_length(value)
     }
 
     pub fn next_draft(&self, path: &[Point3]) -> Option<Point3> {
@@ -365,31 +342,16 @@ impl Geometry {
     }
 }
 
-/// `String.prototype.trim` (Leerraum und Zeilenumbrüche).
-pub fn js_trim(text: &str) -> &str {
-    text.trim_matches(|c: char| c.is_whitespace() || c == '\u{feff}')
-}
-
-/// `/^\+?(?:\d+(?:[.,]\d*)?|[.,]\d+)$/`
-fn is_length_syntax(text: &str) -> bool {
-    let body = text.strip_prefix('+').unwrap_or(text);
-    let bytes = body.as_bytes();
-    if bytes.is_empty() {
-        return false;
-    }
-    let is_sep = |b: u8| b == b'.' || b == b',';
-    if is_sep(bytes[0]) {
-        return bytes.len() > 1 && bytes[1..].iter().all(u8::is_ascii_digit);
-    }
-    let digits = bytes.iter().take_while(|b| b.is_ascii_digit()).count();
-    if digits == 0 {
-        return false;
-    }
-    let rest = &bytes[digits..];
-    if rest.is_empty() {
-        return true;
-    }
-    is_sep(rest[0]) && rest[1..].iter().all(u8::is_ascii_digit)
+/// Umlaufsinn eines geschlossenen Pfades in der Draufsicht (Fläche ≤ 0 = Uhrzeigersinn).
+pub fn is_clockwise(path: &[Point3]) -> bool {
+    let area: f64 = (0..path.len())
+        .map(|i| {
+            let a = path[i];
+            let b = path[(i + 1) % path.len()];
+            a[0] * b[1] - b[0] * a[1]
+        })
+        .sum();
+    area <= 0.0
 }
 
 #[cfg(test)]
@@ -479,20 +441,15 @@ mod tests {
         assert_eq!(s.affected, vec![(0, 1.0), (2, 1.0)]);
         let out = g.resize_from_edge(&r, &s, 0, 6.0).unwrap();
         assert_eq!(out, rect(6.0, 3.0));
-        assert!(g.resize_from_edge(&r, &s, 1, 6.0).is_err());
+        assert_eq!(g.resize_from_edge(&r, &s, 1, 6.0), Err(KernError::NotAffectedByEdge));
     }
 
     #[test]
-    fn parse_length_rules() {
-        let g = geo();
-        assert_eq!(g.parse_length("2,50").unwrap(), 2.5);
-        assert_eq!(g.parse_length(" +3. ").unwrap(), 3.0);
-        assert_eq!(g.parse_length(",5").unwrap(), 0.5);
-        assert!(g.parse_length("1e3").is_err());
-        assert!(g.parse_length("-1").is_err());
-        assert!(g.parse_length("1.000,5").is_err());
-        assert!(g.parse_length("0").is_err());
-        assert!(g.parse_length("").is_err());
+    fn clockwise() {
+        let path = [[0.0, 0.0, 0.0], [10.0, 0.0, 0.0], [10.0, -4.0, 0.0], [0.0, -4.0, 0.0]];
+        assert!(is_clockwise(&path));
+        let reversed: Vec<Point3> = path.iter().rev().copied().collect();
+        assert!(!is_clockwise(&reversed));
     }
 
     #[test]

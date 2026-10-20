@@ -1,6 +1,7 @@
 [package]
 name = "skizzeo-kern"
 version = "0.1.0"
-edition = "2024"
+edition.workspace = true
+description = "Geometriekern: Gebäudemodell, Geometrie, Maßketten und Regeln, ohne Oberfläche"
 
 [dependencies]

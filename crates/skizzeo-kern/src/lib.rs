@@ -1,43 +1,34 @@
-//! Deterministischer Rechenkern des Skizzeo-Viewports.
+//! Geometriekern von Skizzeo.
 //!
-//! Der Kern ist frei von Oberfläche, Zeit und Plattform. Er entspricht den Kapiteln
-//! 03-workflow, 04-geometry, 04-dimensions und den reinen Teilen von 05-camera des
-//! Prototyps V039.
+//! Der Kern ist eine eigenständige Einheit: Er besitzt das Gebäudemodell (Grundrisse),
+//! seine Geometrie, die Maßketten und die fachlichen Regeln der Eingabe. Er kennt
+//! weder Bildschirm, Kamera, Zeit noch Plattform und meldet Fehler als [`KernError`],
+//! nicht als Text. Darstellung und Bedienung bauen auf ihm auf, nie umgekehrt.
 
-pub mod camera;
-pub mod dimension_geometry;
-pub mod format;
+pub mod error;
 pub mod geometry;
 pub mod measurements;
-pub mod workflow;
+pub mod model;
+pub mod units;
+
+pub use error::KernError;
 
 /// Weltpunkt in Metern. X/Y horizontal, Z nach oben.
 pub type Point3 = [f64; 3];
 
-/// Gemeinsame Parameter (SETTINGS im Prototyp).
+/// Grenzwerte des Kerns (geometrischer Teil von SETTINGS im Prototyp).
 #[derive(Clone, Copy, Debug)]
 pub struct Settings {
     pub geometry_epsilon: f64,
     pub minimum_length: f64,
+    /// Bevorzugung der bisherigen Richtung beim rechtwinkligen Entwurf.
     pub direction_hysteresis: f64,
-    pub touch_deadband: f64,
-    pub mouse_deadband: f64,
-    pub touch_close_radius: f64,
-    pub mouse_close_radius: f64,
-    pub fit_duration_ms: f64,
-    pub orbit_sensitivity: f64,
 }
 
 pub const SETTINGS: Settings = Settings {
     geometry_epsilon: 1e-8,
     minimum_length: 1e-6,
     direction_hysteresis: 1.4,
-    touch_deadband: 6.0,
-    mouse_deadband: 3.0,
-    touch_close_radius: 52.0,
-    mouse_close_radius: 24.0,
-    fit_duration_ms: 320.0,
-    orbit_sensitivity: 0.006,
 };
 
 /// `Math.sign` aus JavaScript: liefert 0 für 0 (anders als `f64::signum`).
