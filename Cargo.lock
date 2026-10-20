@@ -1833,10 +1833,29 @@ dependencies = [
  "log",
  "serde",
  "serde_json",
- "skizzeo-kern",
+ "skizzeo-darstellung",
+ "skizzeo-editor",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+]
+
+[[package]]
+name = "skizzeo-darstellung"
+version = "0.39.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "skizzeo-kern",
+]
+
+[[package]]
+name = "skizzeo-editor"
+version = "0.39.0"
+dependencies = [
+ "log",
+ "skizzeo-darstellung",
+ "skizzeo-kern",
 ]
 
 [[package]]

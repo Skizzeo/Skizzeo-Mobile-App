@@ -1,13 +1,12 @@
 //! Skizzeo · 3D-Kern Viewport V039 als Rust-Anwendung.
 
 mod app;
-mod controller;
+mod app_frame;
+mod colors;
 mod fonts;
-mod glyphs;
-mod model;
 mod platform;
-mod render;
-mod style;
+#[cfg(test)]
+mod scenario_tests;
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result {

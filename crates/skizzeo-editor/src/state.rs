@@ -1,76 +1,16 @@
-//! 02-state: Modell, Interaktion, Einpassung und Darstellungszustand.
+//! 02-state: Interaktion, Maßdatensätze, Einpassung und Darstellungszustand.
+//!
+//! Das Gebäudemodell selbst liegt im Kern ([`skizzeo_kern::model`]).
 
 use std::collections::HashMap;
 
-use skizzeo_kern::camera::{Camera, ViewSnapshot};
-use skizzeo_kern::dimension_geometry::DimensionLine;
+use skizzeo_darstellung::camera::{Camera, ViewSnapshot};
+use skizzeo_darstellung::dimension_geometry::DimensionLine;
+use skizzeo_darstellung::render::{DimensionLayout, PreviewBounds};
 use skizzeo_kern::geometry::EdgeSelection;
 use skizzeo_kern::measurements::ChainRecord;
+use skizzeo_kern::model::{Model, PathKey};
 use skizzeo_kern::Point3;
-
-/// Bestätigtes geschlossenes Polygon mit stabiler Identität.
-#[derive(Clone, Debug)]
-pub struct Polygon {
-    pub id: u64,
-    pub points: Vec<Point3>,
-}
-
-/// Ersatz für die Array-Identitäten des Prototyps.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum PathKey {
-    Polygon(u64),
-    /// Offener Zug mit Generationsnummer (neue Zuweisung = neue Identität).
-    Active(u64),
-    /// Eigenständiger Vorschaupfad `[letzter Punkt, Entwurf]`.
-    Temp,
-}
-
-#[derive(Debug, Default)]
-pub struct Model {
-    pub polygons: Vec<Polygon>,
-    pub active: Vec<Point3>,
-    pub active_gen: u64,
-    pub next_id: u64,
-}
-
-impl Model {
-    pub fn active_key(&self) -> PathKey {
-        PathKey::Active(self.active_gen)
-    }
-
-    /// `model.activePath = ...` erzeugt eine neue Identität.
-    pub fn replace_active(&mut self, points: Vec<Point3>) {
-        self.active = points;
-        self.active_gen += 1;
-    }
-
-    pub fn path(&self, key: PathKey) -> Option<&Vec<Point3>> {
-        match key {
-            PathKey::Polygon(id) => self.polygons.iter().find(|p| p.id == id).map(|p| &p.points),
-            PathKey::Active(generation) if generation == self.active_gen => Some(&self.active),
-            _ => None,
-        }
-    }
-
-    pub fn path_mut(&mut self, key: PathKey) -> Option<&mut Vec<Point3>> {
-        match key {
-            PathKey::Polygon(id) => self
-                .polygons
-                .iter_mut()
-                .find(|p| p.id == id)
-                .map(|p| &mut p.points),
-            PathKey::Active(generation) if generation == self.active_gen => Some(&mut self.active),
-            _ => None,
-        }
-    }
-
-    pub fn push_polygon(&mut self, points: Vec<Point3>) -> u64 {
-        self.next_id += 1;
-        let id = self.next_id;
-        self.polygons.push(Polygon { id, points });
-        id
-    }
-}
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum MeasureKind {
@@ -204,13 +144,6 @@ pub struct Gesture {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct PreviewBounds {
-    pub x: f64,
-    pub y: f64,
-    pub half_width: f64,
-}
-
-#[derive(Clone, Copy, Debug)]
 pub struct DraftSnap {
     pub axis: usize,
     pub x: f64,
@@ -297,20 +230,6 @@ pub struct FitState {
     pub path: Option<PathKey>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Rect {
-    pub left: f64,
-    pub top: f64,
-    pub right: f64,
-    pub bottom: f64,
-}
-
-impl Rect {
-    pub fn contains(&self, x: f64, y: f64) -> bool {
-        x >= self.left && x <= self.right && y >= self.top && y <= self.bottom
-    }
-}
-
 #[derive(Clone, Debug)]
 pub struct PanelView {
     pub camera: Camera,
@@ -321,14 +240,6 @@ pub struct PanelView {
 pub struct SavedView {
     pub camera: Camera,
     pub height: f64,
-}
-
-/// Abgeleitetes Layout einer Maßzahl im letzten Frame.
-#[derive(Clone, Debug)]
-pub struct DimensionLayout {
-    pub slot: usize,
-    pub box_: Rect,
-    pub hit_box: Rect,
 }
 
 #[derive(Debug, Default)]

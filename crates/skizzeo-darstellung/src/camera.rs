@@ -1,6 +1,6 @@
 //! 05-camera: Kamera, Projektion und Bodentreffer (reine Rechenteile).
 
-use crate::Point3;
+use skizzeo_kern::Point3;
 
 /// `Math.tan(Math.PI / 8)`: halber vertikaler Öffnungswinkel von 45°.
 pub fn view_slope() -> f64 {

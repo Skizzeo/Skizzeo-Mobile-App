@@ -12,18 +12,21 @@ use egui::{
 };
 use serde_json::Value as Json;
 
-use crate::controller::{Focus, PointerEvent, Viewport};
-use crate::fonts::font;
-use crate::model::{Drag, Rect as BoxRect};
-use crate::platform::{Insets, Platform, RawInput, RawPointer};
-use crate::style::{
-    self, defaults_json, hex_color, number_text, parse_number_input, Appearance, Kind, Partial, Tab,
-    FIELDS,
+use skizzeo_darstellung::render::Rect as BoxRect;
+use skizzeo_darstellung::style::{
+    self, defaults_json, number_text, parse_number_input, Appearance, Kind, Partial, Tab, FIELDS,
 };
+use skizzeo_editor::state::Drag;
+use skizzeo_editor::{Focus, PointerEvent, Viewport};
+
+use crate::app_frame::paint_frame;
+use crate::colors::{hex_color, Colors};
+use crate::fonts::font;
+use crate::platform::{Insets, Platform, RawInput, RawPointer};
 
 const VERSION: &str = "V039";
 const DRAWING_HINT: &str = "Zurückfahren gesperrt. Richtung wechseln oder „Schritt zurück“ wählen.";
-const DIRECTION_HINT: &str = "Polygon im Uhrzeigersinn eingeben. Das erste Segment ist mit 10 m vorgegeben; seine Länge änderst du durch Antippen des Maßes.";
+const DIRECTION_HINT: &str = "Polygon im Uhrzeigersinn eingeben. Zeige die Richtung der ersten Geraden; ihre Länge ist mit 10 m voreingestellt und lässt sich per Zahl ändern.";
 const TABS: [(Tab, &str); 4] = [
     (Tab::Dimensions, "Bemaßung"),
     (Tab::View, "Ansicht"),
@@ -1645,7 +1648,7 @@ impl eframe::App for App {
 
         // Zeichenfläche (WebGL-Durchgänge) und Achsbeschriftungen
         let background = ctx.layer_painter(LayerId::background());
-        self.vp.render_frame(&background, screen.min);
+        paint_frame(&mut self.vp, &background, screen.min);
         self.draw_axis_labels(&background);
         if !self.ov.started {
             self.ov.started = true;

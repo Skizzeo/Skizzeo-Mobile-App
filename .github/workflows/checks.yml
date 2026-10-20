@@ -1,0 +1,25 @@
+name: Prüfungen
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - name: Tests aller Pakete
+        run: cargo test --workspace
+      - name: Kern ohne Abhängigkeiten
+        run: test "$(cargo tree -p skizzeo-kern --edges normal --prefix none | sort -u | wc -l)" -eq 1
+      - name: Editor ohne Grafikbibliothek
+        run: "! cargo tree -p skizzeo-editor --edges normal | grep -E 'egui|eframe|web-sys'"
+      - name: Web-Version übersetzen
+        run: cargo build -p skizzeo-app --release --target wasm32-unknown-unknown
