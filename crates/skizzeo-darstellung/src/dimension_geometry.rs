@@ -98,43 +98,6 @@ pub fn segment_dimension(
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use skizzeo_kern::geometry::is_clockwise;
-
-    fn style() -> DimensionStyle {
-        DimensionStyle {
-            dimension_offset: 1.5,
-            dimension_spacing: 1.0,
-            extension_gap: 0.2,
-            extension_overhang: 0.2,
-            dimension_overhang: 0.2,
-            symbol: DimensionSymbol::Slash,
-            tick_length: 0.4,
-        }
-    }
-
-    #[test]
-    fn segment_dimensions_lie_outside() {
-        // Rechteck im Uhrzeigersinn: oben nach rechts, rechts nach unten, ...
-        let path = [[0.0, 0.0, 0.0], [10.0, 0.0, 0.0], [10.0, -4.0, 0.0], [0.0, -4.0, 0.0]];
-        assert!(is_clockwise(&path));
-        let top = segment_dimension(&path, 0, 0, &style(), true);
-        assert_eq!(top.line_start[1], 1.5);
-        let right = segment_dimension(&path, 1, 1, &style(), true);
-        assert_eq!(right.line_start[0], 11.5);
-        let bottom = segment_dimension(&path, 2, 0, &style(), true);
-        assert_eq!(bottom.line_start[1], -5.5);
-        let left = segment_dimension(&path, 3, 1, &style(), true);
-        assert_eq!(left.line_start[0], -1.5);
-        let reversed: Vec<Point3> = path.iter().rev().copied().collect();
-        assert!(!is_clockwise(&reversed));
-        let top = segment_dimension(&reversed, 2, 0, &style(), false);
-        assert_eq!(top.line_start[1], 1.5);
-    }
-}
-
 pub fn dimension_strokes(line: &DimensionLine, style: &DimensionStyle) -> Vec<DimensionStroke> {
     let DimensionLine {
         axis,
@@ -195,4 +158,41 @@ pub fn dimension_strokes(line: &DimensionLine, style: &DimensionStyle) -> Vec<Di
         }
     }
     strokes
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use skizzeo_kern::geometry::is_clockwise;
+
+    fn style() -> DimensionStyle {
+        DimensionStyle {
+            dimension_offset: 1.5,
+            dimension_spacing: 1.0,
+            extension_gap: 0.2,
+            extension_overhang: 0.2,
+            dimension_overhang: 0.2,
+            symbol: DimensionSymbol::Slash,
+            tick_length: 0.4,
+        }
+    }
+
+    #[test]
+    fn segment_dimensions_lie_outside() {
+        // Rechteck im Uhrzeigersinn: oben nach rechts, rechts nach unten, ...
+        let path = [[0.0, 0.0, 0.0], [10.0, 0.0, 0.0], [10.0, -4.0, 0.0], [0.0, -4.0, 0.0]];
+        assert!(is_clockwise(&path));
+        let top = segment_dimension(&path, 0, 0, &style(), true);
+        assert_eq!(top.line_start[1], 1.5);
+        let right = segment_dimension(&path, 1, 1, &style(), true);
+        assert_eq!(right.line_start[0], 11.5);
+        let bottom = segment_dimension(&path, 2, 0, &style(), true);
+        assert_eq!(bottom.line_start[1], -5.5);
+        let left = segment_dimension(&path, 3, 1, &style(), true);
+        assert_eq!(left.line_start[0], -1.5);
+        let reversed: Vec<Point3> = path.iter().rev().copied().collect();
+        assert!(!is_clockwise(&reversed));
+        let top = segment_dimension(&reversed, 2, 0, &style(), false);
+        assert_eq!(top.line_start[1], 1.5);
+    }
 }
