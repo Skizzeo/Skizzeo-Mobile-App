@@ -1,7 +1,7 @@
 //! Darstellungsadapter der Maßlinien (createDimensionGeometry).
 
-use crate::measurements::{ChainKind, ChainRecord};
-use crate::{js_sign, Point3};
+use skizzeo_kern::measurements::{ChainKind, ChainRecord};
+use skizzeo_kern::{js_sign, Point3};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DimensionSymbol {
@@ -98,21 +98,10 @@ pub fn segment_dimension(
     }
 }
 
-/// Umlaufsinn eines geschlossenen Pfades in der Draufsicht (Fläche ≤ 0 = Uhrzeigersinn).
-pub fn is_clockwise(path: &[Point3]) -> bool {
-    let area: f64 = (0..path.len())
-        .map(|i| {
-            let a = path[i];
-            let b = path[(i + 1) % path.len()];
-            a[0] * b[1] - b[0] * a[1]
-        })
-        .sum();
-    area <= 0.0
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use skizzeo_kern::geometry::is_clockwise;
 
     fn style() -> DimensionStyle {
         DimensionStyle {

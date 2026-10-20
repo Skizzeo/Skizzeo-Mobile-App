@@ -1,25 +1,30 @@
 //! 05- bis 11-Kapitel: Kamera-Einpassung, Zeichnen, Maßeingabe, Rahmenvorbereitung,
 //! Zeiger- und Gestensteuerung sowie Größenwechsel.
 
-use skizzeo_kern::camera::{
+use skizzeo_darstellung::camera::{
     camera_basis, dot, ground_point, project, view_projection, view_slope, Camera, Matrix,
     ViewSnapshot,
 };
-use skizzeo_kern::dimension_geometry::{
+use skizzeo_darstellung::dimension_geometry::{
     self as dimgeo, DimensionLine, DimensionStroke, DimensionStyle, DimensionSymbol,
 };
-use skizzeo_kern::format::{building_millimeters, format_building_length, format_length_input, spoken_length};
-use skizzeo_kern::geometry::Geometry;
+use skizzeo_darstellung::format::{
+    format_building_length, format_length_input, parse_length_input, spoken_length,
+};
+use skizzeo_darstellung::render::{
+    self, DrawList, FrameDimension, FrameSelected, Rect, RenderFrame, RenderOutput,
+};
+use skizzeo_darstellung::style::Appearance;
+use skizzeo_darstellung::texte;
+use skizzeo_kern::geometry::{is_clockwise, Geometry};
 use skizzeo_kern::measurements::{ChainKind, Measurements};
-use skizzeo_kern::workflow::{transition, WorkflowEvent, WorkflowState};
-use skizzeo_kern::{Point3, SETTINGS};
+use skizzeo_kern::model::{Model, PathKey};
+use skizzeo_kern::units::building_length;
+use skizzeo_kern::{KernError, Point3, SETTINGS};
 
-use crate::model::*;
-use crate::render::{self, FrameDimension, FrameSelected, RenderFrame, RenderOutput};
-use crate::style::Appearance;
-
-/// Länge des vorgegebenen ersten Segments in Metern.
-pub const START_SEGMENT: f64 = 10.0;
+use crate::state::*;
+use crate::workflow::{transition, WorkflowEvent, WorkflowState};
+use crate::INPUT;
 
 /// Normalisierte Zeigerereignisse der Zeichenfläche.
 #[derive(Clone, Copy, Debug)]
@@ -188,7 +193,7 @@ impl Viewport {
                 Record {
                     key,
                     temp: None,
-                    name: chain.name.clone(),
+                    name: texte::chain_name(&chain),
                     kind: MeasureKind::Chain(chain),
                     line,
                     source: None,
@@ -205,7 +210,7 @@ impl Viewport {
             index,
             self.geometry.segment_axis(path, index),
             &self.dimension_style(),
-            !closed || dimgeo::is_clockwise(path),
+            !closed || is_clockwise(path),
         )
     }
 
@@ -290,7 +295,7 @@ impl Viewport {
         let Some(motion) = self.fit.animation.clone() else {
             return;
         };
-        let progress = ((self.now - motion.started) / SETTINGS.fit_duration_ms).clamp(0.0, 1.0);
+        let progress = ((self.now - motion.started) / INPUT.fit_duration_ms).clamp(0.0, 1.0);
         let eased = progress * progress * (3.0 - 2.0 * progress);
         for i in 0..3 {
             self.camera.target[i] =
@@ -572,9 +577,9 @@ impl Viewport {
     fn snap_draft(&mut self, candidate: Point3, position: Position) -> Option<Point3> {
         let last = *self.model.active.last()?;
         let deadband = if position.kind == PointerType::Touch {
-            SETTINGS.touch_deadband
+            INPUT.touch_deadband
         } else {
-            SETTINGS.mouse_deadband
+            INPUT.mouse_deadband
         };
         if let Some(snap) = self.interaction.draft_snap {
             if (position.x - snap.x).hypot(position.y - snap.y) < deadband {
@@ -625,12 +630,12 @@ impl Viewport {
             self.camera.elevation = self.camera.elevation.max(std::f64::consts::PI / 5.0);
         }
         self.interaction.hover_edge = None;
-        // Erstes Segment im Uhrzeigersinn mit 10 m vorgegeben (per Maß änderbar).
-        self.model.replace_active(if enabled {
-            vec![[0.0, 0.0, 0.0], [START_SEGMENT, 0.0, 0.0]]
+        // Erstes Segment im Uhrzeigersinn vorgegeben (per Maß änderbar).
+        if enabled {
+            self.model.start_path();
         } else {
-            Vec::new()
-        });
+            self.model.clear_active();
+        }
         self.interaction.pointer = None;
         self.interaction.start_armed = false;
         self.interaction.preview_bounds = None;
@@ -653,7 +658,7 @@ impl Viewport {
         if (x - start[0]).hypot(y - start[1]) > radius {
             return false;
         }
-        if self.geometry.close_path(&self.model.active).is_none() {
+        if !self.model.can_close(&self.geometry) {
             return false;
         }
         self.request_close();
@@ -661,7 +666,7 @@ impl Viewport {
     }
 
     pub fn request_close(&mut self) {
-        if !self.is_drawing() || self.geometry.close_path(&self.model.active).is_none() {
+        if !self.is_drawing() || !self.model.can_close(&self.geometry) {
             return;
         }
         self.close_length_editor(false);
@@ -687,16 +692,15 @@ impl Viewport {
         if !self.is_closing() {
             return;
         }
-        let Some(closed) = self.geometry.close_path(&self.model.active) else {
+        let Some(closure) = self.model.close_active(&self.geometry) else {
             self.dismiss_close();
             return;
         };
-        let mut path = self.model.active.clone();
-        if path.len() > 1 && self.geometry.same_point(&path[path.len() - 1], &path[0]) {
-            path.pop();
-        }
-        let id = self.model.push_polygon(closed);
-        self.interaction.last_closure = Some(LastClosure { path, polygon: id });
+        let id = closure.polygon;
+        self.interaction.last_closure = Some(LastClosure {
+            path: closure.path,
+            polygon: id,
+        });
         self.set_drawing(false);
         self.request_fit(Some(PathKey::Polygon(id)), true);
     }
@@ -712,17 +716,19 @@ impl Viewport {
         self.transition_workflow(WorkflowEvent::Resume);
         self.interaction.start_near = false;
         let reopen = !self.is_drawing()
-            && self.interaction.last_closure.as_ref().is_some_and(|c| {
-                self.model.polygons.iter().any(|p| p.id == c.polygon)
-            });
+            && self
+                .interaction
+                .last_closure
+                .as_ref()
+                .is_some_and(|c| self.model.has_polygon(c.polygon));
         if reopen {
             let saved = self.interaction.last_closure.take().expect("letzte Schließung");
-            self.model.polygons.retain(|p| p.id != saved.polygon);
+            self.model.remove_polygon(saved.polygon);
             self.set_drawing(true);
             self.model.replace_active(saved.path);
             self.interaction.last_closure = None;
-        } else if self.is_drawing() && !pending_draft && self.model.active.len() > 1 {
-            self.model.active.pop();
+        } else if self.is_drawing() && !pending_draft {
+            self.model.pop_point();
         }
         self.interaction.draft_snap = None;
         self.interaction.draft_blocked = false;
@@ -743,9 +749,9 @@ impl Viewport {
             return;
         }
         let radius = if position.kind == PointerType::Touch {
-            SETTINGS.touch_close_radius
+            INPUT.touch_close_radius
         } else {
-            SETTINGS.mouse_close_radius
+            INPUT.mouse_close_radius
         };
         if self.finish_path(position.x, position.y, radius) {
             return;
@@ -824,12 +830,12 @@ impl Viewport {
             .project(&self.model.active[0], &matrix)
             .map_or(f64::INFINITY, |s| (pointer.x - s[0]).hypot(pointer.y - s[1]));
         let radius = if pointer.kind == PointerType::Touch {
-            SETTINGS.touch_close_radius
+            INPUT.touch_close_radius
         } else {
-            SETTINGS.mouse_close_radius
+            INPUT.mouse_close_radius
         };
         self.interaction.start_near = (self.interaction.start_hovered || distance <= radius)
-            && self.geometry.close_path(&self.model.active).is_some();
+            && self.model.can_close(&self.geometry);
         if distance > radius + 12.0 {
             self.interaction.start_armed = true;
         }
@@ -975,12 +981,12 @@ impl Viewport {
         match self.compute_length_commit(&edit) {
             Ok(next) => {
                 if preview {
-                    self.model.active.push(next[1]);
+                    self.model.push_point(next[1]);
                     self.interaction.draft_snap = None;
                     self.interaction.draft_blocked = false;
                     self.interaction.start_near = false;
-                } else if let Some(path) = self.model.path_mut(edit.record.key) {
-                    *path = next.clone();
+                } else {
+                    self.model.set_path(edit.record.key, next.clone());
                 }
                 if self.is_drawing() {
                     self.interaction.pointer = None;
@@ -1005,29 +1011,21 @@ impl Viewport {
                 }
                 true
             }
-            Err(message) => {
-                self.length_error = Some(message);
+            Err(error) => {
+                self.length_error = Some(error.message().to_string());
                 self.invalidate();
                 false
             }
         }
     }
 
-    fn compute_length_commit(&self, edit: &DimensionEdit) -> Result<Vec<Point3>, String> {
-        let text = skizzeo_kern::geometry::js_trim(&self.length_input).to_string();
-        let numeric = if is_superscript_input(&text) {
-            text.replace('⁵', "5")
-        } else {
-            text
-        };
-        let length = building_millimeters(self.geometry.parse_length(&numeric)?) as f64 / 1000.0;
-        if length < 0.005 {
-            return Err("Bitte mindestens 0,005 m eingeben (5-mm-Schritte).".into());
-        }
+    fn compute_length_commit(&self, edit: &DimensionEdit) -> Result<Vec<Point3>, LengthError> {
+        let raw = parse_length_input(&self.length_input).ok_or(LengthError::Number)?;
+        let length = building_length(self.geometry.positive_length(raw)?)?;
         let path = edit
             .record
             .points(&self.model)
-            .ok_or_else(|| "Der Zeichenabschnitt ist nicht mehr aktiv.".to_string())?
+            .ok_or(LengthError::Inactive)?
             .to_vec();
         let edge_control = edit
             .edge_control
@@ -1054,12 +1052,10 @@ impl Viewport {
         };
         if edit.record.is_preview() {
             if !self.is_drawing() || edit.record.source != Some(self.model.active_key()) {
-                return Err("Der Zeichenabschnitt ist nicht mehr aktiv.".into());
+                return Err(LengthError::Inactive);
             }
             if self.geometry.overlaps_path(&self.model.active, &next[1]) {
-                return Err(
-                    "Dieses Segment würde eine bereits gesetzte Strecke zurückfahren.".into(),
-                );
+                return Err(KernError::RetracesPath.into());
             }
         }
         Ok(next)
@@ -1408,9 +1404,11 @@ impl Viewport {
     }
 
     /// Ein Frame: Kameraanimation, Entwurf, Einpassung, Darstellung.
-    pub fn render_frame(&mut self, painter: &egui::Painter, origin: egui::Pos2) {
+    ///
+    /// Liefert die Zeichenaufrufe; `pixels_per_point` ist die Pixeldichte der Ausgabe.
+    pub fn render_frame(&mut self, pixels_per_point: f64) -> DrawList {
         if self.width == 0.0 || self.height == 0.0 {
-            return;
+            return DrawList::default();
         }
         self.needs_repaint = false;
         let editing_viewport = self
@@ -1448,11 +1446,12 @@ impl Viewport {
                 }
             }
         }
+        let (list, output) = render::render(&frame, pixels_per_point);
         let RenderOutput {
             dimension_layouts,
             preview_bounds,
             axis_labels,
-        } = render::render(&frame, painter, origin);
+        } = output;
         self.axis_labels = axis_labels;
         self.frame_records = records;
         self.interaction.preview_bounds = preview_bounds;
@@ -1467,11 +1466,12 @@ impl Viewport {
         if !editing_viewport && (self.fit.animation.is_some() || self.fit.requested) {
             self.invalidate();
         }
+        list
     }
 
     /// Sichtbarkeit und Lage der Eingabe-Bedienelemente (`drawInputControls`).
     pub fn start_target(&self) -> Option<[f64; 2]> {
-        if !self.is_drawing() || self.geometry.close_path(&self.model.active).is_none() {
+        if !self.is_drawing() || !self.model.can_close(&self.geometry) {
             return None;
         }
         if self.interaction.dimension_edit.is_some() || self.interaction.navigation {
@@ -1541,9 +1541,7 @@ impl Viewport {
     fn restore_edit(&mut self) {
         if let Some(Drag::Edit { edge, original, .. }) = &self.interaction.drag {
             let (key, original) = (edge.key, original.clone());
-            if let Some(path) = self.model.path_mut(key) {
-                *path = original;
-            }
+            self.model.set_path(key, original);
         }
     }
 
@@ -1616,9 +1614,9 @@ impl Viewport {
         };
         let limit = std::f64::consts::FRAC_PI_2 - 0.015;
         self.camera.azimuth = gesture.camera.azimuth
-            - ((a.x + b.x) / 2.0 - gesture.x) * SETTINGS.orbit_sensitivity;
+            - ((a.x + b.x) / 2.0 - gesture.x) * INPUT.orbit_sensitivity;
         self.camera.elevation = (gesture.camera.elevation
-            + ((a.y + b.y) / 2.0 - gesture.y) * SETTINGS.orbit_sensitivity)
+            + ((a.y + b.y) / 2.0 - gesture.y) * INPUT.orbit_sensitivity)
             .min(limit)
             .max(-limit);
         self.camera.distance = (gesture.camera.distance * gesture.separation
@@ -1738,9 +1736,9 @@ impl Viewport {
             match self.interaction.drag.clone() {
                 Some(Drag::Orbit { id, x, y }) => {
                     let limit = std::f64::consts::FRAC_PI_2 - 0.015;
-                    self.camera.azimuth -= (position.x - x) * SETTINGS.orbit_sensitivity;
+                    self.camera.azimuth -= (position.x - x) * INPUT.orbit_sensitivity;
                     self.camera.elevation = (self.camera.elevation
-                        + (position.y - y) * SETTINGS.orbit_sensitivity)
+                        + (position.y - y) * INPUT.orbit_sensitivity)
                         .min(limit)
                         .max(-limit);
                     self.interaction.drag = Some(Drag::Orbit {
@@ -1759,9 +1757,7 @@ impl Viewport {
                     if let Some(hit) = self.ground_point(position.x, position.y) {
                         let delta = hit[axis] - start[axis];
                         let updated = self.geometry.shifted_segment(&original, edge.index, delta, true);
-                        if let Some(path) = self.model.path_mut(edge.key) {
-                            *path = updated;
-                        }
+                        self.model.set_path(edge.key, updated);
                     }
                 }
                 _ => self.update_live_point(false, true),
@@ -2056,18 +2052,26 @@ fn midpoint(a: &Point3, b: &Point3) -> Point3 {
     [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0, (a[2] + b[2]) / 2.0]
 }
 
-/// `/^\+?\d+[.,]\d{2}⁵$/`
-fn is_superscript_input(text: &str) -> bool {
-    let Some(body) = text.strip_suffix('⁵') else {
-        return false;
-    };
-    let body = body.strip_prefix('+').unwrap_or(body);
-    let bytes = body.as_bytes();
-    let digits = bytes.iter().take_while(|b| b.is_ascii_digit()).count();
-    if digits == 0 || bytes.len() != digits + 3 {
-        return false;
+/// Grund, aus dem eine Längeneingabe nicht übernommen wird.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum LengthError {
+    Number,
+    Inactive,
+    Kern(KernError),
+}
+
+impl From<KernError> for LengthError {
+    fn from(error: KernError) -> Self {
+        LengthError::Kern(error)
     }
-    (bytes[digits] == b'.' || bytes[digits] == b',')
-        && bytes[digits + 1].is_ascii_digit()
-        && bytes[digits + 2].is_ascii_digit()
+}
+
+impl LengthError {
+    fn message(self) -> &'static str {
+        match self {
+            LengthError::Number => texte::MSG_NUMBER,
+            LengthError::Inactive => texte::MSG_INACTIVE_SEGMENT,
+            LengthError::Kern(error) => texte::kern_error(error),
+        }
+    }
 }

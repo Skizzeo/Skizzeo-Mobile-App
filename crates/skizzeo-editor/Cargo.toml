@@ -1,0 +1,10 @@
+[package]
+name = "skizzeo-editor"
+version.workspace = true
+edition.workspace = true
+description = "Bedienlogik: Zeichenmodus, Eingaben, Maßeditor und Einpassung, ohne Grafikbibliothek"
+
+[dependencies]
+skizzeo-kern = { path = "../skizzeo-kern" }
+skizzeo-darstellung = { path = "../skizzeo-darstellung" }
+log = "0.4"

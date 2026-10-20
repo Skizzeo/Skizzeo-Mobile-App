@@ -8,10 +8,12 @@
 
 use std::fmt::Write as _;
 
+use skizzeo_darstellung::render::Rect;
+use skizzeo_darstellung::style::Appearance;
+use skizzeo_editor::state::PointerType;
+use skizzeo_editor::{PointerEvent, Viewport};
+
 use crate::app_frame::paint_frame;
-use crate::controller::{PointerEvent, Viewport};
-use crate::model::{PointerType, Rect};
-use crate::style::Appearance;
 
 const GOLDEN: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/golden/scenario.txt");
 

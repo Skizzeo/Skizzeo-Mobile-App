@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/skizzeo-kern", "crates/skizzeo-app"]
+members = ["crates/skizzeo-kern", "crates/skizzeo-darstellung", "crates/skizzeo-editor", "crates/skizzeo-app"]
 
 [workspace.package]
 version = "0.39.0"

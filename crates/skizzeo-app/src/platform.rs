@@ -3,7 +3,7 @@
 //! Im Browser werden die Pointer-Events des Prototyps direkt abgegriffen (inklusive
 //! Pointer-Capture). Nativ (Entwicklung am PC) entstehen sie aus den egui-Ereignissen.
 
-use crate::model::PointerType;
+use skizzeo_editor::state::PointerType;
 
 #[derive(Clone, Copy, Debug)]
 pub struct RawPointer {
@@ -52,7 +52,7 @@ mod web {
     use wasm_bindgen::JsCast;
 
     use super::{Insets, RawInput, RawPointer};
-    use crate::model::PointerType;
+    use skizzeo_editor::state::PointerType;
 
     pub struct Platform {
         queue: Rc<RefCell<Vec<RawInput>>>,
@@ -331,7 +331,7 @@ mod native {
     use std::time::Instant;
 
     use super::{Insets, RawInput, RawPointer};
-    use crate::model::PointerType;
+    use skizzeo_editor::state::PointerType;
 
     pub struct Platform {
         started: Instant,

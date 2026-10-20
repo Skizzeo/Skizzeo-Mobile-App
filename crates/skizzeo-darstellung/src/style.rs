@@ -157,10 +157,6 @@ impl Appearance {
         }
     }
 
-    pub fn color(&self, key: &str) -> egui::Color32 {
-        hex_color(self.text(key))
-    }
-
     pub fn rgb(&self, key: &str) -> [f64; 3] {
         hex_rgb(self.text(key))
     }
@@ -192,15 +188,13 @@ pub fn hex_rgb(hex: &str) -> [f64; 3] {
     [channel(1), channel(3), channel(5)]
 }
 
-pub fn hex_color(hex: &str) -> egui::Color32 {
-    let [r, g, b] = hex_rgb(hex);
-    rgb_color([r, g, b])
-}
+/// 8-Bit-Farbe (Rot, Grün, Blau) ohne Bindung an eine Grafikbibliothek.
+pub type Rgb8 = [u8; 3];
 
 /// Normalisierte Komponenten wie im Shader in 8-Bit-Farbe.
-pub fn rgb_color(c: [f64; 3]) -> egui::Color32 {
+pub fn rgb_color(c: [f64; 3]) -> Rgb8 {
     let byte = |v: f64| (v.clamp(0.0, 1.0) * 255.0).round() as u8;
-    egui::Color32::from_rgb(byte(c[0]), byte(c[1]), byte(c[2]))
+    [byte(c[0]), byte(c[1]), byte(c[2])]
 }
 
 fn is_hex_color(text: &str) -> bool {

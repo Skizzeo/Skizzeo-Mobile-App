@@ -1,17 +1,58 @@
-//! 08-gpu und 09-render: Umgebung, Achsen, Pfade und Maßzahlen als egui-Dreiecksnetze.
+//! 08-gpu und 09-render: Umgebung, Achsen, Pfade und Maßzahlen als Dreieckslisten.
 //!
-//! Alle Koordinaten werden wie im Prototyp auf der CPU projiziert; die Netze
+//! Alle Koordinaten werden wie im Prototyp auf der CPU projiziert; die Dreieckslisten
 //! entsprechen den WebGL-Zeichenaufrufen (Umgebung, Achsenkegel, Bildschirmpfad, Glyphen).
+//! Das Ergebnis ist unabhängig von einer Grafikbibliothek ([`DrawList`]); die
+//! Plattformschicht überträgt es in ihre eigenen Netze.
 
-use egui::epaint::{Mesh, Vertex, WHITE_UV};
-use egui::{Color32, Painter, Pos2, Shape};
-use skizzeo_kern::camera::{clip, project, Matrix};
-use skizzeo_kern::dimension_geometry::DimensionStroke;
 use skizzeo_kern::Point3;
 
+use crate::camera::{clip, project, Matrix};
+use crate::dimension_geometry::DimensionStroke;
 use crate::glyphs::glyph;
-use crate::model::{DimensionLayout, PreviewBounds, Rect};
-use crate::style::{rgb_color, Appearance};
+use crate::style::{rgb_color, Appearance, Rgb8};
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Rect {
+    pub left: f64,
+    pub top: f64,
+    pub right: f64,
+    pub bottom: f64,
+}
+
+impl Rect {
+    pub fn contains(&self, x: f64, y: f64) -> bool {
+        x >= self.left && x <= self.right && y >= self.top && y <= self.bottom
+    }
+}
+
+/// Abgeleitetes Layout einer Maßzahl im letzten Frame.
+#[derive(Clone, Debug)]
+pub struct DimensionLayout {
+    pub slot: usize,
+    pub box_: Rect,
+    pub hit_box: Rect,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct PreviewBounds {
+    pub x: f64,
+    pub y: f64,
+    pub half_width: f64,
+}
+
+/// Einfarbige Dreiecke in Bildschirmkoordinaten (CSS-Pixel relativ zur Zeichenfläche),
+/// je drei Ecken hintereinander.
+#[derive(Clone, Debug, Default)]
+pub struct TriangleBatch {
+    pub vertices: Vec<([f64; 2], Rgb8)>,
+}
+
+/// Zeichenaufrufe eines Frames in Zeichenreihenfolge.
+#[derive(Clone, Debug, Default)]
+pub struct DrawList {
+    pub batches: Vec<TriangleBatch>,
+}
 
 #[derive(Clone, Debug)]
 pub struct FrameDimension {
@@ -119,38 +160,23 @@ fn boxes_overlap(a: &Rect, b: &Rect, gap: f64) -> bool {
 }
 
 /// Sammelt Dreiecke in Bildschirmkoordinaten (CSS-Pixel relativ zur Zeichenfläche).
+#[derive(Default)]
 struct Triangles {
-    mesh: Mesh,
-    origin: Pos2,
+    batch: TriangleBatch,
 }
 
 impl Triangles {
-    fn new(origin: Pos2) -> Self {
-        Self {
-            mesh: Mesh::default(),
-            origin,
-        }
+    fn new() -> Self {
+        Self::default()
     }
 
-    fn vertex(&mut self, p: [f64; 2], color: Color32) {
-        let index = self.mesh.vertices.len() as u32;
-        self.mesh.vertices.push(Vertex {
-            pos: Pos2::new(self.origin.x + p[0] as f32, self.origin.y + p[1] as f32),
-            uv: WHITE_UV,
-            color,
-        });
-        self.mesh.indices.push(index);
+    fn triangle(&mut self, a: [f64; 2], b: [f64; 2], c: [f64; 2], color: Rgb8) {
+        self.batch.vertices.extend([(a, color), (b, color), (c, color)]);
     }
 
-    fn triangle(&mut self, a: [f64; 2], b: [f64; 2], c: [f64; 2], color: Color32) {
-        self.vertex(a, color);
-        self.vertex(b, color);
-        self.vertex(c, color);
-    }
-
-    fn finish(self, painter: &Painter) {
-        if !self.mesh.is_empty() {
-            painter.add(Shape::mesh(self.mesh));
+    fn finish(self, list: &mut DrawList) {
+        if !self.batch.vertices.is_empty() {
+            list.batches.push(self.batch);
         }
     }
 }
@@ -162,7 +188,7 @@ fn clipped_triangle(
     corners: [[f64; 4]; 3],
     width: f64,
     height: f64,
-    color: Color32,
+    color: Rgb8,
 ) {
     let mut polygon: Vec<[f64; 4]> = corners.to_vec();
     for plane in [1.0, -1.0] {
@@ -208,10 +234,9 @@ fn clipped_triangle(
 }
 
 /// Fragment-Shader der Umgebung, zeilenweise ausgewertet (hängt nur von der Höhe ab).
-fn draw_environment(frame: &RenderFrame, painter: &Painter, origin: Pos2) {
+fn draw_environment(frame: &RenderFrame, pixels_per_point: f64, list: &mut DrawList) {
     let style = &frame.style;
     let e = frame.elevation;
-    let pixels_per_point = f64::from(painter.ctx().pixels_per_point());
     let ratio = pixels_per_point.min(2.0);
     let pixel_height = (frame.height * ratio).round().max(1.0);
     let ground_color = style.rgb("groundColor");
@@ -226,9 +251,9 @@ fn draw_environment(frame: &RenderFrame, painter: &Painter, origin: Pos2) {
     // Zeilen in Gerätepixeln der tatsächlichen Darstellung
     let rows = (frame.height * pixels_per_point).round().max(1.0) as usize;
     let row_height = frame.height / rows as f64;
-    let mut out = Triangles::new(origin);
-    let mut previous: Option<(Color32, f64)> = None;
-    let push = |out: &mut Triangles, color: Color32, top: f64, bottom: f64| {
+    let mut out = Triangles::new();
+    let mut previous: Option<(Rgb8, f64)> = None;
+    let push = |out: &mut Triangles, color: Rgb8, top: f64, bottom: f64| {
         let (a, b, c, d) = ([0.0, top], [frame.width, top], [frame.width, bottom], [0.0, bottom]);
         out.triangle(a, b, c, color);
         out.triangle(a, c, d, color);
@@ -256,14 +281,14 @@ fn draw_environment(frame: &RenderFrame, painter: &Painter, origin: Pos2) {
     if let Some((color, start)) = previous {
         push(&mut out, color, start, frame.height);
     }
-    out.finish(painter);
+    out.finish(list);
 }
 
 /// Achsenkegel (Tiefentest durch Sortierung von hinten nach vorn).
-fn draw_axis_cones(frame: &RenderFrame, painter: &Painter, origin: Pos2) {
+fn draw_axis_cones(frame: &RenderFrame, list: &mut DrawList) {
     let style = &frame.style;
     let scale = style.num("axisSize") / 2.5;
-    let mut triangles: Vec<([[f64; 4]; 3], Color32, f64)> = Vec::new();
+    let mut triangles: Vec<([[f64; 4]; 3], Rgb8, f64)> = Vec::new();
     for axis in 0..3 {
         let color = rgb_color(style.rgb(["axisX", "axisY", "axisZ"][axis]));
         let scaled = |p: Point3| clip(&frame.matrix, &p.map(|v| v * scale));
@@ -287,11 +312,11 @@ fn draw_axis_cones(frame: &RenderFrame, painter: &Painter, origin: Pos2) {
         }
     }
     triangles.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap_or(std::cmp::Ordering::Equal));
-    let mut out = Triangles::new(origin);
+    let mut out = Triangles::new();
     for (corners, color, _) in triangles {
         clipped_triangle(&mut out, corners, frame.width, frame.height, color);
     }
-    out.finish(painter);
+    out.finish(list);
 }
 
 fn axis_labels(frame: &RenderFrame) -> Vec<Option<(f64, f64)>> {
@@ -398,7 +423,7 @@ impl PathPainter<'_> {
     }
 }
 
-fn draw_paths(frame: &RenderFrame, painter: &Painter, origin: Pos2) {
+fn draw_paths(frame: &RenderFrame, list: &mut DrawList) {
     let style = &frame.style;
     let (width, height, matrix) = (frame.width, frame.height, frame.matrix);
     let screen = |p: &Point3| project(p, &matrix, width, height);
@@ -408,7 +433,7 @@ fn draw_paths(frame: &RenderFrame, painter: &Painter, origin: Pos2) {
     let polygon_width = style.num("polygonWidth");
     let vertex_radius = style.num("vertexRadius");
     let mut pen = PathPainter {
-        out: Triangles::new(origin),
+        out: Triangles::new(),
         width,
         height,
         style,
@@ -497,7 +522,7 @@ fn draw_paths(frame: &RenderFrame, painter: &Painter, origin: Pos2) {
             );
         }
     }
-    pen.out.finish(painter);
+    pen.out.finish(list);
 }
 
 struct Placed {
@@ -633,12 +658,12 @@ fn layout_dimensions(frame: &RenderFrame) -> Vec<Placed> {
     placed
 }
 
-fn draw_dimensions(frame: &RenderFrame, painter: &Painter, origin: Pos2) -> (Vec<DimensionLayout>, Option<PreviewBounds>) {
+fn draw_dimensions(frame: &RenderFrame, list: &mut DrawList) -> (Vec<DimensionLayout>, Option<PreviewBounds>) {
     let style = &frame.style;
     let placed = layout_dimensions(frame);
     let mut layouts = Vec::new();
     let mut preview_bounds = None;
-    let mut out = Triangles::new(origin);
+    let mut out = Triangles::new();
     let narrow = glyph_width(style);
     for layout in &placed {
         let record = &frame.dimensions[layout.index];
@@ -687,22 +712,26 @@ fn draw_dimensions(frame: &RenderFrame, painter: &Painter, origin: Pos2) -> (Vec
             pen_x += glyph_advance(c, style);
         }
     }
-    out.finish(painter);
+    out.finish(list);
     (layouts, preview_bounds)
 }
 
-pub fn render(frame: &RenderFrame, painter: &Painter, origin: Pos2) -> RenderOutput {
-    draw_environment(frame, painter, origin);
+/// Einen Frame in Zeichenaufrufe übersetzen. `pixels_per_point` ist die Pixeldichte
+/// der Ausgabe (Zeilen der Umgebung in Gerätepixeln).
+pub fn render(frame: &RenderFrame, pixels_per_point: f64) -> (DrawList, RenderOutput) {
+    let mut list = DrawList::default();
+    draw_environment(frame, pixels_per_point, &mut list);
     let mut labels = Vec::new();
     if frame.axes_visible {
-        draw_axis_cones(frame, painter, origin);
+        draw_axis_cones(frame, &mut list);
         labels = axis_labels(frame);
     }
-    draw_paths(frame, painter, origin);
-    let (dimension_layouts, preview_bounds) = draw_dimensions(frame, painter, origin);
-    RenderOutput {
+    draw_paths(frame, &mut list);
+    let (dimension_layouts, preview_bounds) = draw_dimensions(frame, &mut list);
+    let output = RenderOutput {
         dimension_layouts,
         preview_bounds,
         axis_labels: labels,
-    }
+    };
+    (list, output)
 }

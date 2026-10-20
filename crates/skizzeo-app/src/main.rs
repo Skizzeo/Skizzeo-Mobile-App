@@ -2,15 +2,11 @@
 
 mod app;
 mod app_frame;
-mod controller;
+mod colors;
 mod fonts;
-mod glyphs;
-mod model;
 mod platform;
-mod render;
 #[cfg(test)]
 mod scenario_tests;
-mod style;
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result {

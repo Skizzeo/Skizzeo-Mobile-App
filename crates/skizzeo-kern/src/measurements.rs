@@ -1,7 +1,7 @@
 //! 04-dimensions: architektonische Maßketten (createMeasurementKernel).
 
 use crate::geometry::{EdgeSelection, Geometry};
-use crate::{js_sign, Point3};
+use crate::{js_sign, KernError, Point3};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ChainKind {
@@ -9,13 +9,22 @@ pub enum ChainKind {
     Total,
 }
 
-impl ChainKind {
-    pub fn label(self) -> &'static str {
-        match self {
-            ChainKind::Offset => "Versatzmaß",
-            ChainKind::Total => "Gesamtmaß",
-        }
-    }
+/// Seite des Polygons, an der eine Maßkette liegt (Draufsicht, Y nach Norden).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Side {
+    South,
+    East,
+    North,
+    West,
+}
+
+/// Stabile Identität einer Maßkette innerhalb eines Polygons.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ChainKey {
+    pub side: Side,
+    pub kind: ChainKind,
+    pub from: usize,
+    pub to: usize,
 }
 
 /// Maßkettendatensatz eines geschlossenen Polygons (ohne Pfadreferenz).
@@ -25,7 +34,7 @@ pub struct ChainRecord {
     pub index: Option<usize>,
     pub axis: usize,
     pub sign: f64,
-    pub side: &'static str,
+    pub side: Side,
     pub kind: ChainKind,
     pub from: usize,
     pub to: usize,
@@ -33,8 +42,7 @@ pub struct ChainRecord {
     pub has_offsets: bool,
     pub origin_start: Point3,
     pub origin_end: Point3,
-    pub key: String,
-    pub name: String,
+    pub key: ChainKey,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -42,9 +50,6 @@ pub struct Station {
     pub value: f64,
     pub index: usize,
 }
-
-pub const MSG_CHAIN_REVERSE: &str = "Dieses Maß würde ein Anschlusssegment umkehren oder aufheben.";
-pub const MSG_CHAIN_DIRECTION: &str = "Das Maß kann in dieser Zugrichtung nicht übernommen werden.";
 
 pub struct Measurements {
     pub core: Geometry,
@@ -122,9 +127,13 @@ impl Measurements {
             return Vec::new();
         }
         let mut records = Vec::new();
-        let sides: [(&'static str, usize, f64); 4] =
-            [("Süd", 0, -1.0), ("Ost", 1, 1.0), ("Nord", 0, 1.0), ("West", 1, -1.0)];
-        for (name, axis, sign) in sides {
+        let sides = [
+            (Side::South, 0, -1.0),
+            (Side::East, 1, 1.0),
+            (Side::North, 0, 1.0),
+            (Side::West, 1, -1.0),
+        ];
+        for (side, axis, sign) in sides {
             let fixed = 1 - axis;
             let stations = self.side_stations(path, axis, sign);
             let extreme = if sign > 0.0 {
@@ -156,7 +165,7 @@ impl Measurements {
                     index,
                     axis,
                     sign,
-                    side: name,
+                    side,
                     kind,
                     from: a.index,
                     to: b.index,
@@ -164,8 +173,12 @@ impl Measurements {
                     has_offsets,
                     origin_start: path[a.index],
                     origin_end: path[b.index],
-                    key: format!("{name}:{}:{}:{}", kind.label(), a.index, b.index),
-                    name: format!("{name} · {}", kind.label()),
+                    key: ChainKey {
+                        side,
+                        kind,
+                        from: a.index,
+                        to: b.index,
+                    },
                 });
             };
             if has_offsets {
@@ -207,7 +220,7 @@ impl Measurements {
         record: &ChainRecord,
         length: f64,
         selection: Option<&EdgeSelection>,
-    ) -> Result<Vec<Point3>, String> {
+    ) -> Result<Vec<Point3>, KernError> {
         let eps = self.core.geometry_epsilon;
         self.core.positive_length(length)?;
         let (axis, from, to) = (record.axis, record.from, record.to);
@@ -239,12 +252,12 @@ impl Measurements {
                     js_sign(old) != js_sign(next) || next.abs() < self.core.minimum_length
                 };
                 if invalid {
-                    return Err(MSG_CHAIN_REVERSE.to_string());
+                    return Err(KernError::ChainReversesSegment);
                 }
             }
         }
         if (updated[to][axis] - updated[from][axis] - length).abs() > length.max(1.0) * 1e-9 {
-            return Err(MSG_CHAIN_DIRECTION.to_string());
+            return Err(KernError::ChainDirection);
         }
         Ok(updated)
     }
@@ -287,7 +300,7 @@ mod tests {
         let path = l_shape();
         let records = m.polygon_measurements(&path);
         assert_eq!(records.len(), 8);
-        for side in ["Süd", "Ost", "Nord", "West"] {
+        for side in [Side::South, Side::East, Side::North, Side::West] {
             let offsets: f64 = records
                 .iter()
                 .filter(|r| r.side == side && r.kind == ChainKind::Offset)
@@ -311,13 +324,13 @@ mod tests {
         let records = m.polygon_measurements(&path);
         let total = records
             .iter()
-            .find(|r| r.side == "Süd" && r.kind == ChainKind::Total)
+            .find(|r| r.side == Side::South && r.kind == ChainKind::Total)
             .unwrap();
         let out = m.resize_chain(&path, total, 8.0, None).unwrap();
         assert!((m.chain_length(&out, total) - 8.0).abs() < 1e-9);
         let nord_offset = records
             .iter()
-            .find(|r| r.side == "Nord" && r.kind == ChainKind::Offset)
+            .find(|r| r.side == Side::North && r.kind == ChainKind::Offset)
             .unwrap();
         assert!(m.resize_chain(&path, nord_offset, 0.000_000_1, None).is_err());
     }
