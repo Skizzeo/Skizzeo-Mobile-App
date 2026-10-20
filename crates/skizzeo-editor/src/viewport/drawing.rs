@@ -66,7 +66,7 @@ impl Viewport {
             self.camera.elevation = self.camera.elevation.max(std::f64::consts::PI / 5.0);
         }
         self.interaction.hover_edge = None;
-        // Erstes Segment im Uhrzeigersinn vorgegeben (per Maß änderbar).
+        // Nur der Startpunkt; die erste Gerade gibt der Nutzer selbst vor.
         if enabled {
             self.model.start_path();
         } else {
