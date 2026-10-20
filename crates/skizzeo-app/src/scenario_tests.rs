@@ -149,6 +149,15 @@ impl Run {
         self.frame(label, self.now);
     }
 
+    /// Erste Gerade: kurzer Klick gibt nur die Richtung vor, 10 m sind voreingestellt.
+    fn first_segment(&mut self, kind: PointerType) {
+        let target = self.screen([2.0, 0.3, 0.0]);
+        self.tap(kind, target);
+        assert_eq!(self.vp.length_input, "10,00");
+        assert!(self.vp.commit_length());
+        self.tick("Erste Gerade");
+    }
+
     fn type_length(&mut self, text: &str) -> bool {
         self.vp.length_input = text.to_string();
         self.vp.commit_length()
@@ -161,6 +170,7 @@ fn scenario() -> String {
     run.vp.on_polygon_toggle();
     run.frame("Zeichnen begonnen", run.now + 100.0);
     run.tick("Zeichnen eingepasst");
+    run.first_segment(PointerType::Mouse);
 
     // Hover ohne Taste, dann Klick: Vorschausegment mit Längeneditor
     let target = run.screen([10.0, -6.0, 0.0]);
@@ -244,6 +254,7 @@ fn scenario() -> String {
     // Zweiter Zug, Rücknahme, Abbruch
     run.vp.on_polygon_toggle();
     run.tick("Zweiter Zug");
+    run.first_segment(PointerType::Touch);
     let target = run.screen([10.0, 4.0, 0.0]);
     run.tap(PointerType::Touch, target);
     run.tick("Vorschau per Touch");
@@ -259,6 +270,7 @@ fn scenario() -> String {
 
     // Schließen und Wiederöffnen per Rückgängig
     run.vp.on_polygon_toggle();
+    run.first_segment(PointerType::Mouse);
     for (point, length) in [([10.0, 5.0, 0.0], "5"), ([0.0, 5.0, 0.0], "10")] {
         let target = run.screen(point);
         run.tap(PointerType::Mouse, target);

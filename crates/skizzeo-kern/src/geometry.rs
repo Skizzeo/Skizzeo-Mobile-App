@@ -2,6 +2,7 @@
 
 use std::collections::BTreeSet;
 
+use crate::model::START_SEGMENT;
 use crate::{js_sign, KernError, Point3, Settings};
 
 /// Unveränderliche Grenzwerte des Kerns.
@@ -305,7 +306,7 @@ impl Geometry {
     pub fn next_draft(&self, path: &[Point3]) -> Option<Point3> {
         let last = *path.last()?;
         if path.len() == 1 {
-            return Some([last[0] + 1.0, last[1], 0.0]);
+            return Some([last[0] + START_SEGMENT, last[1], 0.0]);
         }
         let previous = path[path.len() - 2];
         // Eingabe im Uhrzeigersinn: Vorschlag biegt nach rechts ab.
@@ -332,7 +333,12 @@ impl Geometry {
             }
         }
         let mut point = last;
-        point[axis] = candidate[axis];
+        point[axis] = if path.len() == 1 {
+            // Erste Gerade: Zeiger gibt nur die Richtung vor, Länge voreingestellt.
+            last[axis] + js_sign(delta[axis]) * START_SEGMENT
+        } else {
+            candidate[axis]
+        };
         let blocked = self.overlaps_path(path, &point);
         Draft {
             axis,
@@ -455,13 +461,15 @@ mod tests {
     #[test]
     fn drafts() {
         let g = geo();
-        assert_eq!(g.next_draft(&[[0.0; 3]]), Some([1.0, 0.0, 0.0]));
+        assert_eq!(g.next_draft(&[[0.0; 3]]), Some([START_SEGMENT, 0.0, 0.0]));
         assert_eq!(
             g.next_draft(&[[0.0; 3], [2.0, 0.0, 0.0]]),
             Some([2.0, -1.0, 0.0])
         );
         let d = g.orthogonal_draft(&[[0.0; 3]], &[3.0, 1.0, 0.0], None, 1.4);
-        assert_eq!(d.point, Some([3.0, 0.0, 0.0]));
+        assert_eq!(d.point, Some([START_SEGMENT, 0.0, 0.0]));
+        let d = g.orthogonal_draft(&[[0.0; 3]], &[0.5, -2.0, 0.0], None, 1.4);
+        assert_eq!(d.point, Some([0.0, -START_SEGMENT, 0.0]));
         let d = g.orthogonal_draft(&[[0.0; 3]], &[1.0, 1.3, 0.0], Some(0), 1.4);
         assert_eq!(d.axis, 0);
         let path = vec![[0.0; 3], [2.0, 0.0, 0.0]];
