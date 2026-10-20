@@ -3,7 +3,7 @@
 use crate::geometry::Geometry;
 use crate::Point3;
 
-/// Länge des vorgegebenen ersten Segments in Metern.
+/// Voreingestellte Länge der ersten Geraden in Metern (Vorschau und Zahlenwert).
 pub const START_SEGMENT: f64 = 10.0;
 
 /// Bestätigtes geschlossenes Polygon mit stabiler Identität.
@@ -49,9 +49,9 @@ impl Model {
         self.active_gen += 1;
     }
 
-    /// Neuer Zug: erstes Segment im Uhrzeigersinn mit [`START_SEGMENT`] vorgegeben.
+    /// Neuer Zug: nur der Startpunkt, die erste Gerade gibt der Nutzer selbst ein.
     pub fn start_path(&mut self) {
-        self.replace_active(vec![[0.0, 0.0, 0.0], [START_SEGMENT, 0.0, 0.0]]);
+        self.replace_active(vec![[0.0, 0.0, 0.0]]);
     }
 
     pub fn clear_active(&mut self) {
@@ -145,7 +145,8 @@ mod tests {
         let geometry = Geometry::new(&SETTINGS);
         let mut model = Model::default();
         model.start_path();
-        assert_eq!(model.active, vec![[0.0; 3], [START_SEGMENT, 0.0, 0.0]]);
+        assert_eq!(model.active, vec![[0.0; 3]]);
+        model.push_point([START_SEGMENT, 0.0, 0.0]);
         assert!(!model.can_close(&geometry));
         model.push_point([START_SEGMENT, -4.0, 0.0]);
         let closure = model.close_active(&geometry).expect("schließbar");
@@ -171,6 +172,7 @@ mod tests {
     fn pop_keeps_start_point() {
         let mut model = Model::default();
         model.start_path();
+        model.push_point([START_SEGMENT, 0.0, 0.0]);
         assert!(model.pop_point());
         assert!(!model.pop_point());
         assert_eq!(model.active.len(), 1);

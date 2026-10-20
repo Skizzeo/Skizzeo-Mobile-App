@@ -10,55 +10,64 @@ paint shapes 1 vertices 576 hash b5322cf9566a2cce
 ## Zeichnen begonnen
 phase DRAW_READY drawing true closing false
 camera Camera { azimuth: 0.7853981633974483, elevation: 0.6283185307179586, distance: 9.0, target: [0.0, 0.0, 0.0] }
-active [[0.0, 0.0, 0.0], [10.0, 0.0, 0.0]]
-live Some([10.0, -1.0, 0.0])
+active [[0.0, 0.0, 0.0]]
+live Some([10.0, 0.0, 0.0])
 input "" error None
-record 0 "Laufendes Segment 2" 1.0
-record 1 "Aktueller Zug, Segment 1" 10.0
-layout 0 Rect { left: -4594.576847752867, top: 1890.6031287975416, right: -2837.807394780916, bottom: 3290.027900103744 } Rect { left: -4594.576847752867, top: 1890.6031287975416, right: -2837.807394780916, bottom: 3290.027900103744 }
-layout 1 Rect { left: -509.528471019913, top: 744.751291497076, right: -147.84375309155027, bottom: 1053.1556379263839 } Rect { left: -509.528471019913, top: 744.751291497076, right: -147.84375309155027, bottom: 1053.1556379263839 }
+record 0 "Laufendes Segment 1" 10.0
+layout 0 Rect { left: -509.528471019913, top: 744.751291497076, right: -147.84375309155027, bottom: 1053.1556379263839 } Rect { left: -509.528471019913, top: 744.751291497076, right: -147.84375309155027, bottom: 1053.1556379263839 }
 axes []
-ui start None undo true false hints true false editor None
-paint shapes 3 vertices 5544 hash 4ad60c53bdf41d59
+ui start None undo true true hints true false editor None
+paint shapes 3 vertices 3405 hash 0c428bc05e729199
 ## Zeichnen eingepasst
 phase DRAW_READY drawing true closing false
-camera Camera { azimuth: 0.7853981633974483, elevation: 0.6283185307179586, distance: 36.28289465286485, target: [5.75, 0.25, 0.0] }
+camera Camera { azimuth: 0.7853981633974483, elevation: 0.6283185307179586, distance: 29.456889383092882, target: [5.0, 0.85, 0.0] }
+active [[0.0, 0.0, 0.0]]
+live Some([10.0, 0.0, 0.0])
+input "" error None
+record 0 "Laufendes Segment 1" 10.0
+layout 0 Rect { left: 166.2311627521782, top: 400.79047246821006, right: 231.40737128858348, bottom: 448.79047246821006 } Rect { left: 166.2311627521782, top: 400.79047246821006, right: 231.40737128858348, bottom: 448.79047246821006 }
+axes []
+ui start None undo true true hints true false editor None
+paint shapes 3 vertices 3501 hash 64bfadd69298ccb6
+## Erste Gerade
+phase DRAW_READY drawing true closing false
+camera Camera { azimuth: 0.7853981633974483, elevation: 0.6283185307179586, distance: 29.456889383092882, target: [5.0, 0.85, 0.0] }
 active [[0.0, 0.0, 0.0], [10.0, 0.0, 0.0]]
 live Some([10.0, -1.0, 0.0])
-input "" error None
+input "10,00" error None
 record 0 "Laufendes Segment 2" 1.0
 record 1 "Aktueller Zug, Segment 1" 10.0
-layout 0 Rect { left: 42.19579578875575, top: 454.96865179901533, right: 90.7913054389742, bottom: 502.96865179901533 } Rect { left: 42.19579578875575, top: 454.96865179901533, right: 90.7913054389742, bottom: 502.96865179901533 }
-layout 1 Rect { left: 198.1518503149907, top: 398.4435385880796, right: 251.72524482168396, bottom: 446.4435385880796 } Rect { left: 198.1518503149907, top: 398.4435385880796, right: 251.72524482168396, bottom: 446.4435385880796 }
+layout 0 Rect { left: -32.430312479753006, top: 472.12385895189766, right: 26.54025216186512, bottom: 520.1238589518977 } Rect { left: -32.430312479753006, top: 472.12385895189766, right: 26.54025216186512, bottom: 520.1238589518977 }
+layout 1 Rect { left: 166.2311627521782, top: 400.79047246821006, right: 231.40737128858348, bottom: 448.79047246821006 } Rect { left: 166.2311627521782, top: 400.79047246821006, right: 231.40737128858348, bottom: 448.79047246821006 }
 axes []
 ui start None undo true false hints true false editor None
-paint shapes 3 vertices 5718 hash bb8fa5957519b540
+paint shapes 3 vertices 5718 hash 9126fd329faef757
 ## Hover
 phase DRAW_READY drawing true closing false
 camera Camera { azimuth: 0.7853981633974483, elevation: 0.6283185307179586, distance: 36.28289465286485, target: [5.75, 0.25, 0.0] }
 active [[0.0, 0.0, 0.0], [10.0, 0.0, 0.0]]
-live Some([10.0, -5.999999400572435, 0.0])
-input "" error None
-record 0 "Laufendes Segment 2" 5.999999400572435
+live Some([10.0, -5.999999828714863, 0.0])
+input "10,00" error None
+record 0 "Laufendes Segment 2" 5.999999828714863
 record 1 "Aktueller Zug, Segment 1" 10.0
-layout 0 Rect { left: -3.889618915200167, top: 422.5239949565981, right: 44.85062428258666, bottom: 470.5239949565981 } Rect { left: -3.889618915200167, top: 422.5239949565981, right: 44.85062428258666, bottom: 470.5239949565981 }
+layout 0 Rect { left: -3.8896226060075065, top: 422.5239922891644, right: 44.850620409600765, bottom: 470.5239922891644 } Rect { left: -3.8896226060075065, top: 422.5239922891644, right: 44.850620409600765, bottom: 470.5239922891644 }
 layout 1 Rect { left: 198.1518503149907, top: 398.4435385880796, right: 251.72524482168396, bottom: 446.4435385880796 } Rect { left: 198.1518503149907, top: 398.4435385880796, right: 251.72524482168396, bottom: 446.4435385880796 }
 axes []
 ui start None undo true false hints true false editor None
-paint shapes 3 vertices 6171 hash 4acb967d9768eb38
+paint shapes 3 vertices 6171 hash ef0017b6673e24d3
 ## Editor offen
 phase LENGTH drawing true closing false
 camera Camera { azimuth: 0.7853981633974483, elevation: 0.6283185307179586, distance: 36.28289465286485, target: [5.75, 0.25, 0.0] }
 active [[0.0, 0.0, 0.0], [10.0, 0.0, 0.0]]
-live Some([10.0, -5.999999400572435, 0.0])
+live Some([10.0, -5.999999828714863, 0.0])
 input "6,00" error None
-edit "" touch false at (-7.105050254824765, 399.3725094536426)
-record 0 "Laufendes Segment 2" 5.999999400572435
+edit "" touch false at (-7.105057173170958, 399.3725047578207)
+record 0 "Laufendes Segment 2" 5.999999828714863
 record 1 "Aktueller Zug, Segment 1" 10.0
 layout 1 Rect { left: 198.1518503149907, top: 398.4435385880796, right: 251.72524482168396, bottom: 446.4435385880796 } Rect { left: 198.1518503149907, top: 398.4435385880796, right: 251.72524482168396, bottom: 446.4435385880796 }
 axes []
-ui start None undo true false hints true false editor Some((8.0, 375.3725094536426))
-paint shapes 3 vertices 3525 hash 283cea616cad2c9e
+ui start None undo true false hints true false editor Some((8.0, 375.3725047578207))
+paint shapes 3 vertices 3525 hash dd8ea204c0444ba4
 ## Segment 2 übernommen
 phase DRAW_READY drawing true closing false
 camera Camera { azimuth: 0.7853981633974483, elevation: 0.6283185307179586, distance: 36.28289465286485, target: [5.75, 0.25, 0.0] }
@@ -372,9 +381,29 @@ paint shapes 3 vertices 10902 hash f6ca1474d4efc907
 phase DRAW_READY drawing true closing false
 camera Camera { azimuth: 0.3653981633974484, elevation: 0.6283185307179586, distance: 33.27365587489454, target: [5.0, -3.2499999999999996, 0.0] }
 polygon 1 [[0.0, 1.5150000000000006, 0.0], [13.25, 1.5150000000000006, 0.0], [13.25, -6.5, 0.0], [0.0, -6.5, 0.0]]
+active [[0.0, 0.0, 0.0]]
+live Some([10.0, 0.0, 0.0])
+input "8,01⁵" error None
+record 0 "Polygon 1, Ost · Gesamtmaß" 8.015
+record 1 "Polygon 1, West · Gesamtmaß" 8.015
+record 2 "Laufendes Segment 1" 10.0
+record 3 "Polygon 1, Süd · Gesamtmaß" 13.25
+record 4 "Polygon 1, Nord · Gesamtmaß" 13.25
+layout 0 Rect { left: 56.18560567844824, top: 603.4997998003422, right: 130.01395504712406, bottom: 651.4997998003422 } Rect { left: 56.18560567844824, top: 603.4997998003422, right: 130.01395504712406, bottom: 651.4997998003422 }
+layout 1 Rect { left: 254.45256213683186, top: 300.4336901264441, right: 305.72496420663765, bottom: 348.4336901264441 } Rect { left: 254.45256213683186, top: 300.4336901264441, right: 305.72496420663765, bottom: 348.4336901264441 }
+layout 2 Rect { left: 297.36777386158144, top: 426.8745900399408, right: 345.36777386158144, bottom: 474.8745900399408 } Rect { left: 297.36777386158144, top: 426.8745900399408, right: 345.36777386158144, bottom: 470.8498683925005 }
+layout 3 Rect { left: 2.7473805178502744, top: 392.05637930792375, right: 54.44737971860285, bottom: 440.05637930792375 } Rect { left: 2.7473805178502744, top: 392.05637930792375, right: 54.44737971860285, bottom: 440.05637930792375 }
+layout 4 Rect { left: 332.2641160902616, top: 469.11459727856914, right: 380.2641160902616, bottom: 517.1145972785691 } Rect { left: 332.2641160902616, top: 470.8498683925005, right: 380.2641160902616, bottom: 517.1145972785691 }
+axes []
+ui start None undo true true hints true false editor None
+paint shapes 3 vertices 14349 hash 087f87df9c31aefd
+## Erste Gerade
+phase DRAW_READY drawing true closing false
+camera Camera { azimuth: 0.3653981633974484, elevation: 0.6283185307179586, distance: 33.27365587489454, target: [5.0, -3.2499999999999996, 0.0] }
+polygon 1 [[0.0, 1.5150000000000006, 0.0], [13.25, 1.5150000000000006, 0.0], [13.25, -6.5, 0.0], [0.0, -6.5, 0.0]]
 active [[0.0, 0.0, 0.0], [10.0, 0.0, 0.0]]
 live Some([10.0, -1.0, 0.0])
-input "8,01⁵" error None
+input "10,00" error None
 record 0 "Laufendes Segment 2" 1.0
 record 1 "Polygon 1, Ost · Gesamtmaß" 8.015
 record 2 "Polygon 1, West · Gesamtmaß" 8.015
@@ -463,21 +492,21 @@ phase DRAW_READY drawing true closing false
 camera Camera { azimuth: 0.3653981633974484, elevation: 0.6283185307179586, distance: 33.27365587489454, target: [5.0, -3.2499999999999996, 0.0] }
 polygon 1 [[0.0, 1.5150000000000006, 0.0], [13.25, 1.5150000000000006, 0.0], [13.25, -6.5, 0.0], [0.0, -6.5, 0.0]]
 active [[0.0, 0.0, 0.0]]
-live Some([1.0, 0.0, 0.0])
+live Some([10.0, 0.0, 0.0])
 input "4" error None
-record 0 "Laufendes Segment 1" 1.0
-record 1 "Polygon 1, Ost · Gesamtmaß" 8.015
-record 2 "Polygon 1, West · Gesamtmaß" 8.015
+record 0 "Polygon 1, Ost · Gesamtmaß" 8.015
+record 1 "Polygon 1, West · Gesamtmaß" 8.015
+record 2 "Laufendes Segment 1" 10.0
 record 3 "Polygon 1, Süd · Gesamtmaß" 13.25
 record 4 "Polygon 1, Nord · Gesamtmaß" 13.25
-layout 0 Rect { left: 331.5794749340125, top: 352.9208643115988, right: 379.5794749340125, bottom: 400.9208643115988 } Rect { left: 331.5794749340125, top: 352.9208643115988, right: 379.5794749340125, bottom: 400.9208643115988 }
-layout 1 Rect { left: 56.18560567844824, top: 603.4997998003422, right: 130.01395504712406, bottom: 651.4997998003422 } Rect { left: 56.18560567844824, top: 603.4997998003422, right: 130.01395504712406, bottom: 651.4997998003422 }
-layout 2 Rect { left: 254.45256213683186, top: 300.4336901264441, right: 305.72496420663765, bottom: 348.4336901264441 } Rect { left: 254.45256213683186, top: 300.4336901264441, right: 305.72496420663765, bottom: 348.4336901264441 }
+layout 0 Rect { left: 56.18560567844824, top: 603.4997998003422, right: 130.01395504712406, bottom: 651.4997998003422 } Rect { left: 56.18560567844824, top: 603.4997998003422, right: 130.01395504712406, bottom: 651.4997998003422 }
+layout 1 Rect { left: 254.45256213683186, top: 300.4336901264441, right: 305.72496420663765, bottom: 348.4336901264441 } Rect { left: 254.45256213683186, top: 300.4336901264441, right: 305.72496420663765, bottom: 348.4336901264441 }
+layout 2 Rect { left: 297.36777386158144, top: 426.8745900399408, right: 345.36777386158144, bottom: 474.8745900399408 } Rect { left: 297.36777386158144, top: 426.8745900399408, right: 345.36777386158144, bottom: 470.8498683925005 }
 layout 3 Rect { left: 2.7473805178502744, top: 392.05637930792375, right: 54.44737971860285, bottom: 440.05637930792375 } Rect { left: 2.7473805178502744, top: 392.05637930792375, right: 54.44737971860285, bottom: 440.05637930792375 }
-layout 4 Rect { left: 332.2641160902616, top: 469.11459727856914, right: 380.2641160902616, bottom: 517.1145972785691 } Rect { left: 332.2641160902616, top: 469.11459727856914, right: 380.2641160902616, bottom: 517.1145972785691 }
+layout 4 Rect { left: 332.2641160902616, top: 469.11459727856914, right: 380.2641160902616, bottom: 517.1145972785691 } Rect { left: 332.2641160902616, top: 470.8498683925005, right: 380.2641160902616, bottom: 517.1145972785691 }
 axes []
 ui start None undo true true hints true false editor None
-paint shapes 3 vertices 13407 hash cda48c32f50c9af5
+paint shapes 3 vertices 14349 hash 087f87df9c31aefd
 ## Abgebrochen
 phase VIEW_READY drawing false closing false
 camera Camera { azimuth: 0.3653981633974484, elevation: 0.6283185307179586, distance: 33.27365587489454, target: [5.0, -3.2499999999999996, 0.0] }
@@ -496,6 +525,28 @@ layout 3 Rect { left: 332.2641160902616, top: 469.11459727856914, right: 380.264
 axes []
 ui start None undo false true hints false false editor None
 paint shapes 3 vertices 10890 hash a7bdad49db197df2
+## Erste Gerade
+phase DRAW_READY drawing true closing false
+camera Camera { azimuth: 0.3653981633974484, elevation: 0.6283185307179586, distance: 33.27365587489454, target: [5.0, -3.2499999999999996, 0.0] }
+polygon 1 [[0.0, 1.5150000000000006, 0.0], [13.25, 1.5150000000000006, 0.0], [13.25, -6.5, 0.0], [0.0, -6.5, 0.0]]
+active [[0.0, 0.0, 0.0], [10.0, 0.0, 0.0]]
+live Some([10.0, -1.0, 0.0])
+input "10,00" error None
+record 0 "Laufendes Segment 2" 1.0
+record 1 "Polygon 1, Ost · Gesamtmaß" 8.015
+record 2 "Polygon 1, West · Gesamtmaß" 8.015
+record 3 "Aktueller Zug, Segment 1" 10.0
+record 4 "Polygon 1, Süd · Gesamtmaß" 13.25
+record 5 "Polygon 1, Nord · Gesamtmaß" 13.25
+layout 0 Rect { left: 181.09586761079828, top: 539.7639948251368, right: 239.23874552571652, bottom: 587.7639948251368 } Rect { left: 181.09586761079828, top: 539.7639948251368, right: 239.23874552571652, bottom: 587.7639948251368 }
+layout 1 Rect { left: 56.18560567844824, top: 603.4997998003422, right: 130.01395504712406, bottom: 651.4997998003422 } Rect { left: 56.18560567844824, top: 603.4997998003422, right: 130.01395504712406, bottom: 651.4997998003422 }
+layout 2 Rect { left: 254.45256213683186, top: 300.4336901264441, right: 305.72496420663765, bottom: 348.4336901264441 } Rect { left: 254.45256213683186, top: 300.4336901264441, right: 305.72496420663765, bottom: 348.4336901264441 }
+layout 3 Rect { left: 297.36777386158144, top: 426.8745900399408, right: 345.36777386158144, bottom: 474.8745900399408 } Rect { left: 297.36777386158144, top: 426.8745900399408, right: 345.36777386158144, bottom: 470.8498683925005 }
+layout 4 Rect { left: 2.7473805178502744, top: 392.05637930792375, right: 54.44737971860285, bottom: 440.05637930792375 } Rect { left: 2.7473805178502744, top: 392.05637930792375, right: 54.44737971860285, bottom: 440.05637930792375 }
+layout 5 Rect { left: 332.2641160902616, top: 469.11459727856914, right: 380.2641160902616, bottom: 517.1145972785691 } Rect { left: 332.2641160902616, top: 470.8498683925005, right: 380.2641160902616, bottom: 517.1145972785691 }
+axes []
+ui start None undo true false hints true false editor None
+paint shapes 3 vertices 16608 hash bdd2d13ed3021c7a
 ## Zug
 phase DRAW_READY drawing true closing false
 camera Camera { azimuth: 0.3653981633974484, elevation: 0.6283185307179586, distance: 33.27365587489454, target: [5.0, -3.2499999999999996, 0.0] }
