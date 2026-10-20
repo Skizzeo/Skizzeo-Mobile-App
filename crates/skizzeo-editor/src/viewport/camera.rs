@@ -8,7 +8,7 @@ use skizzeo_darstellung::format::format_building_length;
 use skizzeo_darstellung::render::{
     self, Rect,
 };
-use skizzeo_kern::model::PathKey;
+use skizzeo_kern::model::{PathKey, START_SEGMENT};
 use skizzeo_kern::Point3;
 
 use crate::INPUT;
@@ -122,6 +122,16 @@ impl Viewport {
         };
         let mut points = geometry_points.clone();
         points.extend(self.dimension_bounds(&geometry_points, !is_active));
+        if is_active && geometry_points.len() == 1 {
+            // Nur Startpunkt: Ausschnitt so wählen, dass 10 m in jede Richtung sichtbar sind.
+            let s = geometry_points[0];
+            points.extend([
+                [s[0] + START_SEGMENT, s[1], s[2]],
+                [s[0] - START_SEGMENT, s[1], s[2]],
+                [s[0], s[1] + START_SEGMENT, s[2]],
+                [s[0], s[1] - START_SEGMENT, s[2]],
+            ]);
+        }
         let matrix = self.matrix();
         let edge = 28f64.min(width * 0.08).min(height * 0.08);
         let landscape = width > height;

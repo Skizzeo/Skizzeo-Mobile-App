@@ -26,7 +26,7 @@ use crate::platform::{Insets, Platform, RawInput, RawPointer};
 
 const VERSION: &str = "V039";
 const DRAWING_HINT: &str = "Zurückfahren gesperrt. Richtung wechseln oder „Schritt zurück“ wählen.";
-const DIRECTION_HINT: &str = "Polygon im Uhrzeigersinn eingeben. Das erste Segment ist mit 10 m vorgegeben; seine Länge änderst du durch Antippen des Maßes.";
+const DIRECTION_HINT: &str = "Polygon im Uhrzeigersinn eingeben. Zeige die Richtung der ersten Geraden; ihre Länge ist mit 10 m voreingestellt und lässt sich per Zahl ändern.";
 const TABS: [(Tab, &str); 4] = [
     (Tab::Dimensions, "Bemaßung"),
     (Tab::View, "Ansicht"),

@@ -306,7 +306,8 @@ impl Geometry {
     pub fn next_draft(&self, path: &[Point3]) -> Option<Point3> {
         let last = *path.last()?;
         if path.len() == 1 {
-            return Some([last[0] + START_SEGMENT, last[1], 0.0]);
+            // Erste Gerade: keine Vorschau, bis der Zeiger die Richtung vorgibt.
+            return None;
         }
         let previous = path[path.len() - 2];
         // Eingabe im Uhrzeigersinn: Vorschlag biegt nach rechts ab.
@@ -461,7 +462,7 @@ mod tests {
     #[test]
     fn drafts() {
         let g = geo();
-        assert_eq!(g.next_draft(&[[0.0; 3]]), Some([START_SEGMENT, 0.0, 0.0]));
+        assert_eq!(g.next_draft(&[[0.0; 3]]), None);
         assert_eq!(
             g.next_draft(&[[0.0; 3], [2.0, 0.0, 0.0]]),
             Some([2.0, -1.0, 0.0])
